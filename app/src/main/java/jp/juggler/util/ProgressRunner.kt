@@ -19,6 +19,7 @@ class ProgressRunner constructor(
 
         const val PROGRESS_NONE = - 1
         const val PROGRESS_SPINNER = ProgressDialogEx.STYLE_SPINNER
+        @Suppress("unused")
         const val PROGRESS_HORIZONTAL = ProgressDialogEx.STYLE_HORIZONTAL
 
         private val percent_format : NumberFormat by lazy {
@@ -40,14 +41,14 @@ class ProgressRunner constructor(
     private val handler = Handler()
     private val info = ProgressInfo()
     private var progress : ProgressDialogEx? = null
-    private var progress_prefix : String? = null
+    private var progressPrefix : String? = null
     private var canceller: Job? = null
 
     private val refContext : WeakReference<Context> = WeakReference(context)
 
-    private var last_message_shown : Long = 0
+    private var lastMessageShown : Long = 0
 
-    private val proc_progress_message = object : Runnable {
+    private val procProgressMessage = object : Runnable {
         override fun run() {
             synchronized(this) {
                 if(progress?.isShowing == true) {
@@ -57,6 +58,7 @@ class ProgressRunner constructor(
         }
     }
 
+    @Suppress("MemberVisibilityCanBePrivate")
     var isActive : Boolean = true
         private set
 
@@ -76,7 +78,7 @@ class ProgressRunner constructor(
     }
 
     fun progressPrefix(s : String) : ProgressRunner {
-        this.progress_prefix = s
+        this.progressPrefix = s
         return this
     }
 
@@ -116,14 +118,14 @@ class ProgressRunner constructor(
         val progress = this.progress ?: return
 
         val message = info.message.trim { it <= ' ' }
-        val progress_prefix = this.progress_prefix
+        val progressPrefix = this.progressPrefix
         progress.setMessage(
-            if(progress_prefix == null || progress_prefix.isEmpty()) {
+            if(progressPrefix == null || progressPrefix.isEmpty()) {
                 message
             } else if(message.isEmpty()) {
-                progress_prefix
+                progressPrefix
             } else {
-                "$progress_prefix\n$message"
+                "$progressPrefix\n$message"
             }
         )
 
@@ -138,19 +140,19 @@ class ProgressRunner constructor(
             progress.setProgressPercentFormat(percent_format)
         }
 
-        last_message_shown = SystemClock.elapsedRealtime()
+        lastMessageShown = SystemClock.elapsedRealtime()
     }
 
     // 少し後にダイアログのメッセージを更新する
     // あまり頻繁に更新せず、しかし繰り返し呼ばれ続けても時々は更新したい
     // どのスレッドから呼ばれるか分からない
     private fun delayProgressMessage() {
-        var wait = 100L + last_message_shown - SystemClock.elapsedRealtime()
+        var wait = 100L + lastMessageShown - SystemClock.elapsedRealtime()
         wait = if(wait < 0L) 0L else if(wait > 100L) 100L else wait
 
         synchronized(this) {
-            handler.removeCallbacks(proc_progress_message)
-            handler.postDelayed(proc_progress_message, wait)
+            handler.removeCallbacks(procProgressMessage)
+            handler.postDelayed(procProgressMessage, wait)
         }
     }
 
@@ -162,6 +164,7 @@ class ProgressRunner constructor(
         delayProgressMessage()
     }
 
+    @Suppress("unused")
     fun publishApiProgressRatio(value : Int, max : Int) {
         synchronized(this) {
             info.isIndeterminate = false
