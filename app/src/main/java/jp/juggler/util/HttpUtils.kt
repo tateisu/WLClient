@@ -4,7 +4,6 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONObject
 import java.io.IOException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -17,9 +16,6 @@ val MEDIA_TYPE_JSON : MediaType =
 
 fun String.toRequestBody(mediaType : MediaType = MEDIA_TYPE_FORM_URL_ENCODED) : RequestBody =
 	this.toRequestBody(mediaType)
-
-fun JSONObject.toRequestBody(mediaType : MediaType = MEDIA_TYPE_JSON) : RequestBody =
-	this.toString().toRequestBody(mediaType)
 
 fun RequestBody.toPost() : Request.Builder =
 	Request.Builder().post(this)
@@ -36,11 +32,7 @@ fun RequestBody.toPatch() :Request.Builder =
 fun RequestBody.toRequest(methodArg : String) :Request.Builder =
 	Request.Builder().method(methodArg, this)
 
-fun JSONObject.toPostRequestBuilder() : Request.Builder =
-	Request.Builder().post(this.toString().toRequestBody(MEDIA_TYPE_JSON))
-
-fun JSONObject.toPutRequestBuilder() : Request.Builder =
-	Request.Builder().put(this.toString().toRequestBody(MEDIA_TYPE_JSON))
+////////////////////////////////////////////////////
 
 const val OKHTTP_STACK_RECORDER_PROPERTY = "ru.gildor.coroutines.okhttp.stackrecorder"
 const val OKHTTP_STACK_RECORDER_ON = "on"
