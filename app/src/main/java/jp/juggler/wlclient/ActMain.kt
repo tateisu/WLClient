@@ -388,14 +388,17 @@ class ActMain : AppCompatActivity(), CoroutineScope {
     }
 
     private fun saveAll() = launch {
-        val list = lastList
-        if (list?.isEmpty() != false) {
-            showToast(this@ActMain, true, "list is null or empty.")
-        } else {
-            list.forEach {
-                it.prepareLargeImage(this@ActMain, lastStep)
+        ProgressRunner(this@ActMain).progressPrefix("Save images… ").run {runner->
+            val list = lastList
+            if (list?.isEmpty() != false) {
+                showToast(this@ActMain, true, "list is null or empty.")
+            } else {
+                list.forEachIndexed { index, girl ->
+                    runner.publishApiProgress(String.format("%d/%d",index+1,list.size))
+                    girl.prepareLargeImage(this@ActMain, lastStep)
+                }
+                showToast(this@ActMain, true, "all image was saved to ${getExternalFilesDir(null)?.absolutePath}")
             }
-            showToast(this@ActMain, true, "all image was saved to ${getExternalFilesDir(null)?.absolutePath}")
         }
     }
 
