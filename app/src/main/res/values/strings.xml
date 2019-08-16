@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">WLClient</string>
+    <string name="cancel">Cancel</string>
+    <string name="start">start</string>
+    <string name="color">color</string>
+    <string name="detail">detail</string>
+    <string name="pose">pose</string>
+    <string name="current_girl">current girl</string>
+    <string name="history">history</string>
+    <string name="save_all">save all</string>
+</resources>
