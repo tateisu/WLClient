@@ -65,8 +65,10 @@ class ActMain : AppCompatActivity(), CoroutineScope {
     private val btnColor by lazy { findViewById<ImageButton>(R.id.btnColor) }
     private val btnDetail by lazy { findViewById<ImageButton>(R.id.btnDetail) }
     private val btnPose by lazy { findViewById<ImageButton>(R.id.btnPose) }
-    private val btnHistory by lazy { findViewById<ImageButton>(R.id.btnHistory) }
     private val btnSaveAll by lazy { findViewById<ImageButton>(R.id.btnSaveAll) }
+    private val btnHistory by lazy { findViewById<ImageButton>(R.id.btnHistory) }
+    private val btnHistoryBack by lazy { findViewById<ImageButton>(R.id.btnHistoryBack) }
+    private val btnHistoryForward by lazy { findViewById<ImageButton>(R.id.btnHistoryForward) }
 
     private val svThumbnails by lazy { findViewById<HorizontalScrollView>(R.id.svThumbnails) }
     private val llThumbnails by lazy { findViewById<LinearLayout>(R.id.grid) }
@@ -189,12 +191,23 @@ class ActMain : AppCompatActivity(), CoroutineScope {
         btnPose.setOnClickListener { generate(3) }
 
         btnSaveAll.setOnClickListener { saveAll() }
+        btnSaveAll.setButtonColor(this@ActMain, R.drawable.ic_save, false)
 
         btnHistory.setOnClickListener {
             startActivityForResult(Intent(this, ActUndoHistory::class.java), REQUEST_CODE_UNDO_HISTORY)
         }
 
-        btnSaveAll.setButtonColor(this@ActMain, R.drawable.ic_save, false)
+        btnHistoryBack.setOnClickListener {
+            launch{
+                History.loadById(lastHistoryId,condition = "<",order = "desc")?.show()
+            }
+        }
+
+        btnHistoryForward.setOnClickListener {
+            launch{
+                History.loadById(lastHistoryId,condition = ">",order = "asc")?.show()
+            }
+        }
     }
 
 
@@ -261,6 +274,23 @@ class ActMain : AppCompatActivity(), CoroutineScope {
         }
     }
 
+    private suspend fun History.show() = ProgressRunner(this@ActMain)
+        .progressPrefix("load from history…")
+        .run {
+
+            lastStep = step
+            lastHistoryId = id
+
+            // restore current girl
+            currentGirl = Girl.load(seeds)
+            currentGirl?.prepareLargeImage(this@ActMain, step)
+            showCurrentGirl()
+
+            //restore choice
+            setThumbnails(Girl.loadByHistoryId(idForThumbnails.notZero() ?: id))
+
+        }
+
     private suspend fun loadHistory(historyId: Long?): Boolean {
         if (historyId == null) {
             showToast(this@ActMain, false, "missing id.")
@@ -269,29 +299,15 @@ class ActMain : AppCompatActivity(), CoroutineScope {
 
         if (historyId == 0L) return false
 
-        return ProgressRunner(this@ActMain)
-            .progressPrefix("load from history…")
-            .run {
+        val src = History.loadById(historyId)
+        if (src == null) {
+            showToast(this@ActMain, false, "missing data.")
+            return false
+        }
 
-                val src = History.loadById(historyId)
-                if (src == null) {
-                    showToast(this@ActMain, false, "missing data.")
-                    return@run false
-                }
+        src.show()
+        return true
 
-                lastStep = src.step
-                lastHistoryId = historyId
-
-                // restore current girl
-                currentGirl = Girl.load(src.seeds)
-                currentGirl?.prepareLargeImage(this@ActMain, lastStep)
-                showCurrentGirl()
-
-                //restore choice
-                setThumbnails(Girl.loadByHistoryId(src.idForThumbnails.notZero() ?: historyId))
-
-                return@run true
-            }
     }
 
 
@@ -388,13 +404,13 @@ class ActMain : AppCompatActivity(), CoroutineScope {
     }
 
     private fun saveAll() = launch {
-        ProgressRunner(this@ActMain).progressPrefix("Save images… ").run {runner->
+        ProgressRunner(this@ActMain).progressPrefix("Save images… ").run { runner ->
             val list = lastList
             if (list?.isEmpty() != false) {
                 showToast(this@ActMain, true, "list is null or empty.")
             } else {
                 list.forEachIndexed { index, girl ->
-                    runner.publishApiProgress(String.format("%d/%d",index+1,list.size))
+                    runner.publishApiProgress(String.format("%d/%d", index + 1, list.size))
                     girl.prepareLargeImage(this@ActMain, lastStep)
                 }
                 showToast(this@ActMain, true, "all image was saved to ${getExternalFilesDir(null)?.absolutePath}")
