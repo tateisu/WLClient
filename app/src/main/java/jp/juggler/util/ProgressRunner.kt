@@ -154,4 +154,20 @@ class ProgressRunner constructor(
         }
     }
 
+    fun publishApiProgress(s : String) {
+        synchronized(this) {
+            info.message = s
+            info.isIndeterminate = true
+        }
+        delayProgressMessage()
+    }
+
+    fun publishApiProgressRatio(value : Int, max : Int) {
+        synchronized(this) {
+            info.isIndeterminate = false
+            info.value = value
+            info.max = max
+        }
+        delayProgressMessage()
+    }
 }
