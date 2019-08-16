@@ -29,7 +29,7 @@
         >
             <ImageButton
                     android:layout_width="0dp"
-                    android:layout_height="40dp"
+                    android:layout_height="44dp"
                     android:src="@drawable/ic_delete"
                     android:layout_weight="1"
                     android:id="@+id/btnNew"
@@ -37,21 +37,21 @@
             />
             <ImageButton
                     android:layout_width="0dp"
-                    android:layout_height="40dp"
+                    android:layout_height="44dp"
                     android:layout_weight="1"
                     android:id="@+id/btnColor"
                     android:contentDescription="@string/color"
             />
             <ImageButton
                     android:layout_width="0dp"
-                    android:layout_height="40dp"
+                    android:layout_height="44dp"
                     android:layout_weight="1"
                     android:id="@+id/btnDetail"
                     android:contentDescription="@string/detail"
             />
             <ImageButton
                     android:layout_width="0dp"
-                    android:layout_height="40dp"
+                    android:layout_height="44dp"
                     android:layout_weight="1"
                     android:id="@+id/btnPose"
                     android:contentDescription="@string/pose"
@@ -72,17 +72,38 @@
         </HorizontalScrollView>
     </LinearLayout>
 
-    <ImageButton
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+    <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:layout_gravity="end|top"
-            android:src="@drawable/ic_history"
-            android:id="@+id/btnHistory"
-            android:contentDescription="@string/history"
-    />
+            android:orientation="horizontal"
+    >
+        <ImageButton
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:src="@drawable/ic_arrow_back"
+                android:id="@+id/btnHistoryBack"
+                android:contentDescription="@string/back"
+        />
+        <ImageButton
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:src="@drawable/ic_history"
+                android:id="@+id/btnHistory"
+                android:contentDescription="@string/history"
+        />
+        <ImageButton
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:src="@drawable/ic_arrow_forward"
+                android:id="@+id/btnHistoryForward"
+                android:contentDescription="@string/forward"
+        />
+
+    </LinearLayout>
     <ImageButton
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
             android:layout_gravity="end|bottom"
             android:src="@drawable/ic_save"
             android:id="@+id/btnSaveAll"

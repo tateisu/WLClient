@@ -110,22 +110,6 @@ class History(
             )
         }
 
-        fun loadById(gid: Long): History? {
-            App1.database.query(
-                table,
-                null,
-                "$COL_ID=?",
-                arrayOf(gid.toString()),
-                null,
-                null,
-                null
-            )?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    return load(null, cursor)
-                }
-            }
-            return null
-        }
 
         fun cursorByCreatedAt():Cursor=
             App1.database.query(
@@ -137,6 +121,30 @@ class History(
                 null,
                 "$COL_CREATED_AT desc"
             )
+
+        fun loadById(
+            gid: Long ,
+            condition:String ="=",
+            order :String ="asc"
+        ): History? {
+            App1.database.query(
+                table,
+                null,
+                "$COL_ID $condition ?",
+                arrayOf(gid.toString()),
+                null,
+                null,
+                "$COL_ID $order",
+                "1"
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    return load(null, cursor)
+                }
+            }
+            return null
+        }
+
+
     }
 
     class ColIdx(cursor:Cursor){

@@ -8,4 +8,6 @@
     <string name="current_girl">current girl</string>
     <string name="history">history</string>
     <string name="save_all">save all</string>
+    <string name="back">back</string>
+    <string name="forward">forward</string>
 </resources>
