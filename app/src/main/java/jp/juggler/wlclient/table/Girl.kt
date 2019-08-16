@@ -13,6 +13,7 @@ import jp.juggler.util.*
 import jp.juggler.wlclient.ActionsDialog
 import jp.juggler.wlclient.App1
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.Request
 import java.io.File
@@ -238,6 +239,8 @@ class Girl(
             withContext(Dispatchers.IO) {
                 val path = largePath
                 if (path?.isNotEmpty() == true && File(path).exists()) return@withContext true
+
+                delay(3000L)
 
                 val dataString = JsonObject().apply {
                     put("step", step)
