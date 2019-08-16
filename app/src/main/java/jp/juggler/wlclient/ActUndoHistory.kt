@@ -1,6 +1,5 @@
 package jp.juggler.wlclient
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
 import android.database.Cursor
@@ -19,6 +18,7 @@ import jp.juggler.wlclient.table.Girl
 import jp.juggler.wlclient.table.History
 import kotlinx.coroutines.*
 import java.io.File
+import java.util.*
 import kotlin.coroutines.CoroutineContext
 
 class ActUndoHistory : AppCompatActivity(), CoroutineScope {
@@ -61,7 +61,6 @@ class ActUndoHistory : AppCompatActivity(), CoroutineScope {
         adapter.cursor?.close()
     }
 
-    @SuppressLint("Recycle")
     private fun load() = launch {
         try {
             val cursor = withContext(Dispatchers.IO) { History.cursorByCreatedAt() }
@@ -73,7 +72,6 @@ class ActUndoHistory : AppCompatActivity(), CoroutineScope {
             log.e(ex, "load failed.")
         }
     }
-
 
     inner class ViewHolder(root: View) {
         private val ivThumbnail1: ImageView = root.findViewById(R.id.ivThumbnail1)
@@ -87,8 +85,8 @@ class ActUndoHistory : AppCompatActivity(), CoroutineScope {
 
             if (seeds?.isNotEmpty() == true) {
                 Girl.load(seeds)?.let { girl ->
-                    val file = girl.largePath?.let{ File(it) }
-                    if (file?.exists() == true ) {
+                    val file = girl.largePath?.let { File(it) }
+                    if (file?.exists() == true) {
                         glide.load(file).into(ivThumbnail1)
                         return
                     }
@@ -113,26 +111,40 @@ class ActUndoHistory : AppCompatActivity(), CoroutineScope {
 
         }
 
+
+        private val History.timeString: String
+            get() {
+                val c = GregorianCalendar.getInstance()
+                c.timeInMillis = createdAt
+                val y = c.get(Calendar.YEAR)
+                val m = c.get(Calendar.MONTH) + 1
+                val d = c.get(Calendar.DAY_OF_MONTH)
+                val h = c.get(Calendar.HOUR_OF_DAY)
+                val j = c.get(Calendar.MINUTE)
+                val s = c.get(Calendar.SECOND)
+                return String.format("%d/%02d/%02d\n%02d:%02d:%02d", y, m, d, h, j, s)
+            }
+
         fun bind(item: History?): ViewHolder {
             loadThumbnail1(item?.seeds)
             loadThumbnail2(item?.thumbnail)
 
-            when(item?.event){
-                History.EVENT_GENERATE ->{
+            when (item?.event) {
+                History.EVENT_GENERATE -> {
                     ivThumbnail1.alpha = 0.5f
                     ivThumbnail2.alpha = 1f
                 }
-                History.EVENT_CHOOSE ->{
+                History.EVENT_CHOOSE -> {
                     ivThumbnail1.alpha = 1f
                     ivThumbnail2.alpha = 0.5f
                 }
-                else ->{
+                else -> {
                     ivThumbnail1.alpha = 1f
                     ivThumbnail2.alpha = 1f
                 }
             }
 
-            tvDesc.text = item?.timeString ?:""
+            tvDesc.text = item?.timeString ?: ""
 
             return this
         }

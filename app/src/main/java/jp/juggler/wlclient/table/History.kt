@@ -9,26 +9,25 @@ import jp.juggler.util.getByteArrayOrNull
 import jp.juggler.util.getStringOrNull
 import jp.juggler.wlclient.App1
 import java.io.ByteArrayOutputStream
-import java.util.*
 
 class History(
     // primary key
-    var id :Long = -1L,
+    var id: Long = -1L,
     // creation time
-    val createdAt :Long,
+    val createdAt: Long,
     // trigger to save history, EVENT_GENERATE or EVENT_CHOOSE
-    val event :Int,
+    val event: Int,
     // seeds of current girl. may null if trigger is step0 generation.
-    val seeds :String? = null,
+    val seeds: String? = null,
     // last generate step
-    val step :Int,
+    val step: Int,
     // thumbnail of generation.
     var thumbnail: ByteArray? = null,
     // history id suppliment
-    val idForThumbnails : Long = 0L
-){
+    val idForThumbnails: Long = 0L
+) {
 
-    companion object : TableCompanion{
+    companion object : TableCompanion {
         private val log = LogCategory("History")
 
         const val table = "history"
@@ -41,8 +40,8 @@ class History(
         private const val COL_EVENT = "event"
         private const val COL_ID_THUMBNAILS = "id_thumbnails"
 
-        const val EVENT_GENERATE =1
-        const val EVENT_CHOOSE =2
+        const val EVENT_GENERATE = 1
+        const val EVENT_CHOOSE = 2
 
         override fun onDBCreate(db: SQLiteDatabase) {
             log.d("onDBCreate!")
@@ -66,52 +65,52 @@ class History(
 
         override fun onDBUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
             log.d("onDBUpgrade!")
-            if( oldVersion < 2 && newVersion >= 2){
+            if (oldVersion < 2 && newVersion >= 2) {
                 try {
                     db.execSQL("alter table $table add column $COL_ID_THUMBNAILS integer default 0")
-                } catch(ex : Throwable) {
+                } catch (ex: Throwable) {
                     log.trace(ex)
                 }
             }
         }
 
-        fun create(event:Int,step:Int,seeds:String?,idForThumbnails:Long =0L): History {
+        fun create(event: Int, step: Int, seeds: String?, idForThumbnails: Long = 0L): History {
             return History(
                 createdAt = System.currentTimeMillis(),
                 seeds = seeds,
                 step = step,
                 event = event,
                 idForThumbnails = idForThumbnails
-            ).apply{
+            ).apply {
                 try {
                     val cv = ContentValues()
-                    cv.put(COL_CREATED_AT,this.createdAt)
-                    cv.put(COL_SEEDS,this.seeds)
-                    cv.put(COL_STEP,this.step)
-                    cv.put(COL_EVENT,this.event)
-                    cv.put(COL_ID_THUMBNAILS,this.idForThumbnails)
-                    id = App1.database.insert(table,null,cv)
+                    cv.put(COL_CREATED_AT, this.createdAt)
+                    cv.put(COL_SEEDS, this.seeds)
+                    cv.put(COL_STEP, this.step)
+                    cv.put(COL_EVENT, this.event)
+                    cv.put(COL_ID_THUMBNAILS, this.idForThumbnails)
+                    id = App1.database.insert(table, null, cv)
                     log.d("generation $id created.")
-                } catch(ex : Throwable) {
+                } catch (ex: Throwable) {
                     log.e(ex, "save failed.")
                 }
             }
         }
 
-        fun load(colIdxArg:ColIdx?, cursor: Cursor): History? {
+        fun load(colIdxArg: ColIdx?, cursor: Cursor): History? {
             val colIdx = colIdxArg ?: ColIdx(cursor)
             return History(
                 id = cursor.getLong(colIdx.idxId),
                 seeds = cursor.getStringOrNull(colIdx.idxSeed),
-                step = cursor.getInt( colIdx.idxStep),
-                createdAt = cursor.getLong( colIdx.idxCreatedAt),
+                step = cursor.getInt(colIdx.idxStep),
+                createdAt = cursor.getLong(colIdx.idxCreatedAt),
                 thumbnail = cursor.getByteArrayOrNull(colIdx.idxThumbnail),
-                event = cursor.getInt( colIdx.idxEvent)
+                event = cursor.getInt(colIdx.idxEvent)
             )
         }
 
 
-        fun cursorByCreatedAt():Cursor=
+        fun cursorByCreatedAt(): Cursor =
             App1.database.query(
                 table,
                 null,
@@ -123,9 +122,9 @@ class History(
             )
 
         fun loadById(
-            gid: Long ,
-            condition:String ="=",
-            order :String ="asc"
+            gid: Long,
+            condition: String = "=",
+            order: String = "asc"
         ): History? {
             App1.database.query(
                 table,
@@ -147,38 +146,38 @@ class History(
 
     }
 
-    class ColIdx(cursor:Cursor){
-        val idxId=cursor.getColumnIndex(COL_ID)
-        val idxSeed=cursor.getColumnIndex(COL_SEEDS)
-        val idxStep=cursor.getColumnIndex(COL_STEP)
-        val idxCreatedAt=cursor.getColumnIndex(COL_CREATED_AT)
-        val idxThumbnail=cursor.getColumnIndex(COL_THUMBNAIL)
+    class ColIdx(cursor: Cursor) {
+        val idxId = cursor.getColumnIndex(COL_ID)
+        val idxSeed = cursor.getColumnIndex(COL_SEEDS)
+        val idxStep = cursor.getColumnIndex(COL_STEP)
+        val idxCreatedAt = cursor.getColumnIndex(COL_CREATED_AT)
+        val idxThumbnail = cursor.getColumnIndex(COL_THUMBNAIL)
         val idxEvent = cursor.getColumnIndex(COL_EVENT)
     }
 
     fun saveThumbnail(thumbnailBitmaps: Array<Bitmap?>) {
         val width = 200
-        val bitmap = Bitmap.createBitmap(width,width,Bitmap.Config.ARGB_8888)
+        val bitmap = Bitmap.createBitmap(width, width, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         val paint = Paint()
-        val srcRect = Rect(0,0,0,0)
-        val dstRect = Rect(0,0,width,width)
+        val srcRect = Rect(0, 0, 0, 0)
+        val dstRect = Rect(0, 0, width, width)
         // fill background
         paint.color = Color.WHITE
-        canvas.drawRect(dstRect,paint)
+        canvas.drawRect(dstRect, paint)
         // copy thumbnails
         paint.isFilterBitmap = true
         var idx = 0
-        for( y in 0 until 4){
-            for( x in 0 until 4){
-                thumbnailBitmaps[ idx++ ]?.let{
+        for (y in 0 until 4) {
+            for (x in 0 until 4) {
+                thumbnailBitmaps[idx++]?.let {
                     srcRect.right = it.width
                     srcRect.bottom = it.height
                     dstRect.left = (width * x / 4)
-                    dstRect.right = (width * (x+1) / 4)
+                    dstRect.right = (width * (x + 1) / 4)
                     dstRect.top = (width * y / 4)
-                    dstRect.bottom = (width * (y+1) / 4)
-                    canvas.drawBitmap(it,srcRect,dstRect,paint)
+                    dstRect.bottom = (width * (y + 1) / 4)
+                    canvas.drawBitmap(it, srcRect, dstRect, paint)
                 }
             }
         }
@@ -191,23 +190,10 @@ class History(
         try {
             val cv = ContentValues()
             cv.put(COL_THUMBNAIL, thumbnail)
-            App1.database.update(table,cv,"$COL_ID=?",arrayOf(id.toString()))
-        } catch(ex : Throwable) {
+            App1.database.update(table, cv, "$COL_ID=?", arrayOf(id.toString()))
+        } catch (ex: Throwable) {
             log.e(ex, "save failed.")
         }
     }
-
-    val timeString: String
-        get(){
-            val c = GregorianCalendar.getInstance()
-            c.timeInMillis = createdAt
-            val y = c.get(Calendar.YEAR)
-            val m = c.get(Calendar.MONTH) + 1
-            val d = c.get(Calendar.DAY_OF_MONTH)
-            val h = c.get(Calendar.HOUR_OF_DAY)
-            val j = c.get(Calendar.MINUTE)
-            val s = c.get(Calendar.SECOND)
-            return String.format("%d/%02d/%02d-%02d:%02d:%02d", y, m, d, h, j, s)
-        }
 
 }
