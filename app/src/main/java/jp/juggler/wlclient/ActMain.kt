@@ -71,7 +71,7 @@ class ActMain : AppCompatActivity(), CoroutineScope {
     private val btnHistoryForward by lazy { findViewById<ImageButton>(R.id.btnHistoryForward) }
 
     private val svThumbnails by lazy { findViewById<HorizontalScrollView>(R.id.svThumbnails) }
-    private val llThumbnails by lazy { findViewById<LinearLayout>(R.id.grid) }
+    private val llThumbnails by lazy { findViewById<LinearLayout>(R.id.llThumbnails) }
     private val ivThumbnails = ArrayList<ImageView>()
 
     private var currentGirl: Girl? = null
@@ -157,7 +157,7 @@ class ActMain : AppCompatActivity(), CoroutineScope {
 
         val density = resources.displayMetrics.density
 
-        val thumbHeight = (density * 260f + 0.5f).toInt()
+        val thumbHeight = (density * 200f + 0.5f).toInt()
         for (i in 0 until 16) {
             ImageView(this).apply {
                 layoutParams = LinearLayout.LayoutParams(thumbHeight, thumbHeight)
