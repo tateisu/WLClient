@@ -318,6 +318,7 @@ class Girl(
                                     File(largePath!!)
                                 )
                                 type = "image/png"
+                                putExtra(Intent.EXTRA_SUBJECT, "#WaifuLabs")
                                 putExtra(Intent.EXTRA_STREAM, uri)
                                 addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             })
@@ -332,6 +333,17 @@ class Girl(
                                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                 type = "text/plain"
                                 putExtra(Intent.EXTRA_TEXT, largePath!!)
+                            })
+                        } catch (ex: Throwable) {
+                            showToast(context, ex, "failed.")
+                        }
+                    }
+                    .addAction("Share seeds") {
+                        try {
+                            context.startActivity(Intent(Intent.ACTION_SEND).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, seeds)
                             })
                         } catch (ex: Throwable) {
                             showToast(context, ex, "failed.")
