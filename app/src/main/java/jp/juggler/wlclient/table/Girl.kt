@@ -3,6 +3,7 @@ package jp.juggler.wlclient.table
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.net.Uri
 import android.util.Base64
@@ -81,6 +82,19 @@ class Girl(
 //            }
         }
 
+
+        fun fromCursor(cursor:Cursor,colIdx:ColIdx = ColIdx(cursor)) =
+            Girl(
+                id = cursor.getLong(colIdx.idxId),
+                seeds = cursor.getString(colIdx.idxSeeds),
+                thumbnail = cursor.getBlob(colIdx.idxThumbnail),
+                createdAt = cursor.getLong(colIdx.idxCreatedAt),
+                generationId = cursor.getLong(colIdx.idxGenerationId),
+                largePath = cursor.getStringOrNull(colIdx.idxLargePath),
+                chooseAt = cursor.getLong(colIdx.idxChooseAt)
+            )
+
+
         private fun parse(generationId: Long, generationSub: Int, src: JsonObject): Girl {
             return Girl(
                 seeds = (src["seeds"] as JsonArray<*>).toJsonString(),
@@ -109,18 +123,29 @@ class Girl(
                 return if (!cursor.moveToFirst()) {
                     log.e("load failed. seeds=$seeds")
                     null
-                } else Girl(
-                    id = cursor.getLong(COL_ID),
-                    seeds = cursor.getString(COL_SEEDS),
-                    thumbnail = cursor.getByteArray(COL_THUMBNAIL),
-                    createdAt = cursor.getLong(COL_CREATED_AT),
-                    generationId = cursor.getLong(COL_GENERATION_ID),
-                    largePath = cursor.getStringOrNull(COL_LARGE_PATH),
-                    chooseAt = cursor.getLong(COL_CHOOSE_AT)
-                )
+                } else fromCursor(cursor)
             }
             return null
         }
+
+        fun scanSeeds(callback:(seeds:String)->Unit){
+            App1.database.query(
+                table,
+                arrayOf(COL_SEEDS),
+                null,
+                null,
+                null,
+                null,
+                null
+            ).use{cursor->
+                val idxSeeds = cursor.getColumnIndex(COL_SEEDS)
+                while(cursor.moveToNext()){
+                    callback( cursor.getString(idxSeeds))
+                }
+            }
+        }
+
+
 
         fun loadByHistoryId(gid: Long) = ArrayList<Girl>().apply {
             App1.database.query(
@@ -132,18 +157,9 @@ class Girl(
                 null,
                 "$COL_GENERATION_SUB asc"
             )?.use { cursor ->
+                val colIdx = ColIdx(cursor)
                 while (cursor.moveToNext()) {
-                    add(
-                        Girl(
-                            id = cursor.getLong(COL_ID),
-                            seeds = cursor.getString(COL_SEEDS),
-                            thumbnail = cursor.getByteArray(COL_THUMBNAIL),
-                            createdAt = cursor.getLong(COL_CREATED_AT),
-                            generationId = cursor.getLong(COL_GENERATION_ID),
-                            largePath = cursor.getStringOrNull(COL_LARGE_PATH),
-                            chooseAt = cursor.getLong(COL_CHOOSE_AT)
-                        )
-                    )
+                    add( fromCursor(cursor,colIdx) )
                 }
             }
         }
@@ -174,6 +190,17 @@ class Girl(
 
             return list.mapIndexed { idx, jsonData -> parse(history.id, idx, jsonData) }
         }
+
+    }
+
+    class ColIdx(cursor:Cursor){
+        val idxId = cursor.getColumnIndex(COL_ID)
+        val idxSeeds = cursor.getColumnIndex(COL_SEEDS)
+        val idxThumbnail = cursor.getColumnIndex(COL_THUMBNAIL)
+        val idxCreatedAt = cursor.getColumnIndex(COL_CREATED_AT)
+        val idxGenerationId = cursor.getColumnIndex(COL_GENERATION_ID)
+        val idxLargePath = cursor.getColumnIndex(COL_LARGE_PATH)
+        val idxChooseAt = cursor.getColumnIndex(COL_CHOOSE_AT)
     }
 
     private fun saveLargeData(context: Context, dataString: String) {
