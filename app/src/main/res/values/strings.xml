@@ -12,4 +12,7 @@
     <string name="forward">forward</string>
     <string name="created_at">Created at</string>
     <string name="copy">Copy</string>
+    <string name="seeds">Seeds</string>
+    <string name="randomize">Randomize</string>
+    <string name="generate">Generate</string>
 </resources>

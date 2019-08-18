@@ -22,3 +22,6 @@ fun String.toJsonObject(): JsonObject {
     val o = toJsonAny()
     return if( o is JsonObject) o else JsonObject().apply { put("content", o) }
 }
+
+fun String.toJsonArray() =
+    Parser.default().parse(StringBuilder(this)) as JsonArray<*>

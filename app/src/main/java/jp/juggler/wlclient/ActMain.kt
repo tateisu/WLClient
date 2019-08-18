@@ -11,6 +11,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.beust.klaxon.JsonObject
@@ -24,6 +25,11 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileInputStream
 import kotlin.coroutines.CoroutineContext
+import android.view.Menu
+import android.view.MenuItem
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
+
 
 class ActMain : AppCompatActivity(), CoroutineScope {
 
@@ -90,6 +96,7 @@ class ActMain : AppCompatActivity(), CoroutineScope {
             .apply()
     }
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         job = Job()
@@ -151,11 +158,20 @@ class ActMain : AppCompatActivity(), CoroutineScope {
         }
     }
 
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        menuInflater.inflate(R.menu.act_main, menu)
+        return true
+    }
 
     private fun initUI() {
         setContentView(R.layout.act_main)
 
         val density = resources.displayMetrics.density
+
+        val toolBar: Toolbar = findViewById(R.id.toolbar)
+        setSupportActionBar(toolBar)
+
 
         val thumbHeight = (density * 200f + 0.5f).toInt()
         for (i in 0 until 16) {
@@ -210,6 +226,25 @@ class ActMain : AppCompatActivity(), CoroutineScope {
         }
     }
 
+    override fun onOptionsItemSelected(item: MenuItem): Boolean =
+        when (item.itemId) {
+
+            R.id.menuSeeds -> {
+                launch {
+                    DlgSeeds.open(this@ActMain, currentGirl) { step, seeds ->
+                        suspendCoroutine { cont ->
+                            generate(step, seeds) {
+                                cont.resume(it)
+                            }
+                        }
+                    }
+                }
+                true
+            }
+
+            else -> super.onOptionsItemSelected(item)
+        }
+
 
     // return true if permission granted
     private fun checkStoragePermission() =
@@ -225,28 +260,34 @@ class ActMain : AppCompatActivity(), CoroutineScope {
             }
         }
 
-    private fun generate(step: Int) = launch {
+    private fun generate(
+        step: Int,
+        seedsArg: String? = null,
+        callback: suspend (isOk: Boolean) -> Unit = {}
+    ) = launch {
 
-        lastStep = step
+        callback(try {
 
-        try {
+            var history: History? = null
             ProgressRunner(this@ActMain).progressPrefix("generate…").run {
 
-                var history: History? = null
+                val seeds = if (step == 0) {
+                    null
+                } else {
+                    seedsArg ?: currentGirl?.seeds
+                }
 
                 val list = withContext(Dispatchers.IO) {
 
-                    val base = currentGirl
-
                     val parentSeed: String?
                     val dataString = JsonObject().apply {
-                        if (base == null || step == 0) {
+                        if (seeds == null || step == 0) {
                             put("step", 0)
                             parentSeed = null
                         } else {
                             put("step", step)
-                            put("currentGirl", base.seeds.toJsonAny())
-                            parentSeed = base.seeds
+                            put("currentGirl", seeds.toJsonAny())
+                            parentSeed = seeds
                         }
                     }.toJsonString()
 
@@ -257,21 +298,22 @@ class ActMain : AppCompatActivity(), CoroutineScope {
                 }
 
                 setThumbnails(list)
+                history?.apply { saveThumbnail(bitmapThumbnails) }
 
-                history?.apply {
-                    saveThumbnail(bitmapThumbnails)
-                    lastHistoryId = id
-                }
-
-                if (step == 0) {
+                if (step == 0 || seedsArg != null) {
                     currentGirl = null
                     showCurrentGirl()
                 }
+
+                lastStep = step
+                lastHistoryId = history!!.id
+                true
             }
         } catch (ex: Throwable) {
             log.trace(ex)
             showToast(this@ActMain, ex, "generate failed")
-        }
+            false
+        })
     }
 
     private suspend fun History.show() = ProgressRunner(this@ActMain)
