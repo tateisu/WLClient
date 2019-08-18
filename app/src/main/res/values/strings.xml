@@ -10,4 +10,6 @@
     <string name="save_all">save all</string>
     <string name="back">back</string>
     <string name="forward">forward</string>
+    <string name="created_at">Created at</string>
+    <string name="copy">Copy</string>
 </resources>

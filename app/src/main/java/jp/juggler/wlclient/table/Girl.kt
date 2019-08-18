@@ -6,11 +6,9 @@ import android.content.Intent
 import android.database.sqlite.SQLiteDatabase
 import android.net.Uri
 import android.util.Base64
-import androidx.core.content.FileProvider
 import com.beust.klaxon.JsonArray
 import com.beust.klaxon.JsonObject
 import jp.juggler.util.*
-import jp.juggler.wlclient.ActionsDialog
 import jp.juggler.wlclient.App1
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -20,16 +18,18 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.*
 
-
-@Suppress("unused")
 class Girl(
     var id: Long = -1L,
     val seeds: String,
     val thumbnail: ByteArray,
     var largePath: String? = null,
     val createdAt: Long,
-    val g_id: Long,
-    val g_sub: Int,
+
+    val generationId: Long,
+
+    // sort order in a generation. just used for query.
+    // val generationSub: Int,
+
     var chooseAt: Long = 0
 ) {
 
@@ -81,23 +81,21 @@ class Girl(
 //            }
         }
 
-        private fun parse(g_id: Long, g_sub: Int, src: JsonObject): Girl {
+        private fun parse(generationId: Long, generationSub: Int, src: JsonObject): Girl {
             return Girl(
                 seeds = (src["seeds"] as JsonArray<*>).toJsonString(),
                 thumbnail = Base64.decode(src.string("image") ?: "", 0),
                 createdAt = System.currentTimeMillis(),
-                g_id = g_id,
-                g_sub = g_sub
+                generationId = generationId
             ).apply {
                 try {
-                    val cv = ContentValues()
-                    cv.put(COL_SEEDS, seeds)
-                    cv.put(COL_THUMBNAIL, thumbnail)
-                    cv.put(COL_CREATED_AT, createdAt)
-                    cv.put(COL_GENERATION_ID, g_id)
-                    cv.put(COL_GENERATION_SUB, g_sub)
-                    id = App1.database.insert(table, null, cv)
-                    log.d("create: id =$id, gen=$g_id ")
+                    id = App1.database.insert(table, null, ContentValues().apply {
+                        put(COL_SEEDS, seeds)
+                        put(COL_THUMBNAIL, thumbnail)
+                        put(COL_CREATED_AT, createdAt)
+                        put(COL_GENERATION_ID, generationId)
+                        put(COL_GENERATION_SUB, generationSub)
+                    })
                 } catch (ex: Throwable) {
                     log.trace(ex)
                     log.e(ex, "save failed.")
@@ -116,8 +114,7 @@ class Girl(
                     seeds = cursor.getString(COL_SEEDS),
                     thumbnail = cursor.getByteArray(COL_THUMBNAIL),
                     createdAt = cursor.getLong(COL_CREATED_AT),
-                    g_id = cursor.getLong(COL_GENERATION_ID),
-                    g_sub = cursor.getInt(COL_GENERATION_SUB),
+                    generationId = cursor.getLong(COL_GENERATION_ID),
                     largePath = cursor.getStringOrNull(COL_LARGE_PATH),
                     chooseAt = cursor.getLong(COL_CHOOSE_AT)
                 )
@@ -142,8 +139,7 @@ class Girl(
                             seeds = cursor.getString(COL_SEEDS),
                             thumbnail = cursor.getByteArray(COL_THUMBNAIL),
                             createdAt = cursor.getLong(COL_CREATED_AT),
-                            g_id = cursor.getLong(COL_GENERATION_ID),
-                            g_sub = cursor.getInt(COL_GENERATION_SUB),
+                            generationId = cursor.getLong(COL_GENERATION_ID),
                             largePath = cursor.getStringOrNull(COL_LARGE_PATH),
                             chooseAt = cursor.getLong(COL_CHOOSE_AT)
                         )
@@ -152,7 +148,7 @@ class Girl(
             }
         }
 
-        suspend fun generate(dataString:String,history:History):List<Girl>{
+        suspend fun generate(dataString: String, history: History): List<Girl> {
             val request = Request.Builder()
                 .url("https://api.waifulabs.com/generate")
                 .header(
@@ -160,7 +156,7 @@ class Girl(
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.100 Safari/537.36"
                 )
                 .header("Referer", "https://waifulabs.com/")
-                .post(dataString.toRequestBody(mediaType =MEDIA_TYPE_JSON))
+                .post(dataString.toRequestBody(mediaType = MEDIA_TYPE_JSON))
                 .build()
 
             val res = App1.okHttpClient.newCall(request).await()
@@ -219,7 +215,7 @@ class Girl(
         context.sendBroadcast(Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(file)))
     }
 
-    private val timeString: String
+    val timeString: String
         get() {
             val c = GregorianCalendar.getInstance()
             c.timeInMillis = createdAt
@@ -282,74 +278,5 @@ class Girl(
         }
     }
 
-    // open context menu, view,share,share file path..
-    suspend fun contextMenu(context: Context, step: Int) =
-        ProgressRunner(context)
-            .progressPrefix("prepare large image…")
-            .run {
-                if (!prepareLargeImage(context, step)) {
-                    showToast(context, false, "can't prepare large image.")
-                    return@run
-                }
-
-                ActionsDialog()
-                    .addAction("View image") {
-                        try {
-                            context.startActivity(Intent(Intent.ACTION_VIEW).apply {
-                                val uri = FileProvider.getUriForFile(
-                                    context,
-                                    App1.FILE_PROVIDER_AUTHORITY,
-                                    File(largePath!!)
-                                )
-                                setDataAndType(uri, "image/png")
-                                addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            })
-                        } catch (ex: Throwable) {
-                            log.trace(ex)
-                            showToast(context, ex, "view failed.")
-                        }
-                    }
-                    .addAction("Share image") {
-                        try {
-                            context.startActivity(Intent(Intent.ACTION_SEND).apply {
-                                val uri = FileProvider.getUriForFile(
-                                    context,
-                                    App1.FILE_PROVIDER_AUTHORITY,
-                                    File(largePath!!)
-                                )
-                                type = "image/png"
-                                putExtra(Intent.EXTRA_SUBJECT, "#WaifuLabs")
-                                putExtra(Intent.EXTRA_STREAM, uri)
-                                addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            })
-                        } catch (ex: Throwable) {
-                            log.trace(ex)
-                            showToast(context, ex, "share failed.")
-                        }
-                    }
-                    .addAction("Share file path") {
-                        try {
-                            context.startActivity(Intent(Intent.ACTION_SEND).apply {
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, largePath!!)
-                            })
-                        } catch (ex: Throwable) {
-                            showToast(context, ex, "failed.")
-                        }
-                    }
-                    .addAction("Share seeds") {
-                        try {
-                            context.startActivity(Intent(Intent.ACTION_SEND).apply {
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, seeds)
-                            })
-                        } catch (ex: Throwable) {
-                            showToast(context, ex, "failed.")
-                        }
-                    }
-                    .show(context, title = timeString)
-            }
 
 }
