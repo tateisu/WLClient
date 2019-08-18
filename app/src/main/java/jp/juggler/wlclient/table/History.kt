@@ -23,8 +23,8 @@ class History(
     val step: Int,
     // thumbnail of generation.
     var thumbnail: ByteArray? = null,
-    // history id suppliment
-    val idForThumbnails: Long = 0L
+    // last generation id for EVENT_CHOOSE, 0L for EVENT_GENERATE
+    val generationId: Long = 0L
 ) {
 
     companion object : TableCompanion {
@@ -38,7 +38,7 @@ class History(
         private const val COL_CREATED_AT = "created_at"
         private const val COL_THUMBNAIL = "thumbnail"
         private const val COL_EVENT = "event"
-        private const val COL_ID_THUMBNAILS = "id_thumbnails"
+        private const val COL_GENNERATION_ID = "id_thumbnails" // historical reason, col name not match
 
         const val EVENT_GENERATE = 1
         const val EVENT_CHOOSE = 2
@@ -54,7 +54,7 @@ class History(
 ,$COL_THUMBNAIL blob 
 ,$COL_STEP integer not null
 ,$COL_EVENT integer not null
-,$COL_ID_THUMBNAILS integer not null
+,$COL_GENNERATION_ID integer not null
 )"""
             )
 
@@ -67,30 +67,30 @@ class History(
             log.d("onDBUpgrade!")
             if (oldVersion < 2 && newVersion >= 2) {
                 try {
-                    db.execSQL("alter table $table add column $COL_ID_THUMBNAILS integer default 0")
+                    db.execSQL("alter table $table add column $COL_GENNERATION_ID integer default 0")
                 } catch (ex: Throwable) {
                     log.trace(ex)
                 }
             }
         }
 
-        fun create(event: Int, step: Int, seeds: String?, idForThumbnails: Long = 0L): History {
+        fun create(event: Int, step: Int, seeds: String?, generationId: Long = 0L): History {
             return History(
                 createdAt = System.currentTimeMillis(),
                 seeds = seeds,
                 step = step,
                 event = event,
-                idForThumbnails = idForThumbnails
+                generationId = generationId
             ).apply {
                 try {
-                    val cv = ContentValues()
-                    cv.put(COL_CREATED_AT, this.createdAt)
-                    cv.put(COL_SEEDS, this.seeds)
-                    cv.put(COL_STEP, this.step)
-                    cv.put(COL_EVENT, this.event)
-                    cv.put(COL_ID_THUMBNAILS, this.idForThumbnails)
-                    id = App1.database.insert(table, null, cv)
-                    log.d("generation $id created.")
+                    id = App1.database.insert(table, null, ContentValues().apply{
+                        put(COL_CREATED_AT, createdAt)
+                        put(COL_SEEDS, seeds)
+                        put(COL_STEP, step)
+                        put(COL_EVENT, event)
+                        put(COL_GENNERATION_ID, generationId)
+                    })
+                    log.d("create: id=$id,generationId=$generationId")
                 } catch (ex: Throwable) {
                     log.e(ex, "save failed.")
                 }
@@ -105,7 +105,8 @@ class History(
                 step = cursor.getInt(colIdx.idxStep),
                 createdAt = cursor.getLong(colIdx.idxCreatedAt),
                 thumbnail = cursor.getByteArrayOrNull(colIdx.idxThumbnail),
-                event = cursor.getInt(colIdx.idxEvent)
+                event = cursor.getInt(colIdx.idxEvent),
+                generationId =cursor.getLong(colIdx.idxGenerationId)
             )
         }
 
@@ -153,6 +154,7 @@ class History(
         val idxCreatedAt = cursor.getColumnIndex(COL_CREATED_AT)
         val idxThumbnail = cursor.getColumnIndex(COL_THUMBNAIL)
         val idxEvent = cursor.getColumnIndex(COL_EVENT)
+        val idxGenerationId = cursor.getColumnIndex(COL_GENNERATION_ID)
     }
 
     fun saveThumbnail(thumbnailBitmaps: Array<Bitmap?>) {

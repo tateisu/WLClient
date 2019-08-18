@@ -198,14 +198,14 @@ class ActMain : AppCompatActivity(), CoroutineScope {
         }
 
         btnHistoryBack.setOnClickListener {
-            launch{
-                History.loadById(lastHistoryId,condition = "<",order = "desc")?.show()
+            launch {
+                History.loadById(lastHistoryId, condition = "<", order = "desc")?.show()
             }
         }
 
         btnHistoryForward.setOnClickListener {
-            launch{
-                History.loadById(lastHistoryId,condition = ">",order = "asc")?.show()
+            launch {
+                History.loadById(lastHistoryId, condition = ">", order = "asc")?.show()
             }
         }
     }
@@ -277,6 +277,7 @@ class ActMain : AppCompatActivity(), CoroutineScope {
     private suspend fun History.show() = ProgressRunner(this@ActMain)
         .progressPrefix("load from history…")
         .run {
+            log.d("History.show() current=$seeds, id=$id, generationId=$generationId")
 
             lastStep = step
             lastHistoryId = id
@@ -287,7 +288,7 @@ class ActMain : AppCompatActivity(), CoroutineScope {
             showCurrentGirl()
 
             //restore choice
-            setThumbnails(Girl.loadByHistoryId(idForThumbnails.notZero() ?: id))
+            setThumbnails(Girl.loadByHistoryId(generationId.notZero() ?: id))
 
         }
 
@@ -363,7 +364,7 @@ class ActMain : AppCompatActivity(), CoroutineScope {
                 History.EVENT_CHOOSE,
                 lastStep,
                 seeds,
-                idForThumbnails = lastList?.first()?.g_id ?: 0L
+                generationId = lastList?.first()?.generationId ?: 0L
             ).apply {
                 saveThumbnail(bitmapThumbnails)
                 lastHistoryId = id
