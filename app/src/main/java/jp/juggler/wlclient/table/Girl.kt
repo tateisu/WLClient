@@ -165,13 +165,8 @@ class Girl(
         }
 
         suspend fun generate(dataString: String, history: History): List<Girl> {
-            val request = Request.Builder()
+            val request = App1.requestBase
                 .url("https://api.waifulabs.com/generate")
-                .header(
-                    "User-Agent",
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.100 Safari/537.36"
-                )
-                .header("Referer", "https://waifulabs.com/")
                 .post(dataString.toRequestBody(mediaType = MEDIA_TYPE_JSON))
                 .build()
 
@@ -271,20 +266,14 @@ class Girl(
                     put("currentGirl", seeds.toJsonAny())
                 }.toJsonString()
 
-                val request = Request.Builder()
+                val request = App1.requestBase
                     .url("https://api.waifulabs.com/generate_big")
-                    .header(
-                        "User-Agent",
-                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.100 Safari/537.36"
-                    )
-                    .header("Referer", "https://waifulabs.com/")
                     .post(dataString.toRequestBody(mediaType = MEDIA_TYPE_JSON))
                     .build()
 
                 val res = App1.okHttpClient.newCall(request).await()
 
-                if (!res.isSuccessful)
-                    error("HTTP ${res.code} ${res.message}")
+                if (! res.isSuccessful ) error("HTTP ${res.code} ${res.message}")
 
                 val root = when (val content = res.body?.string()) {
                     null -> error("missing response body")

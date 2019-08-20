@@ -3,18 +3,17 @@ package jp.juggler.util
 ////////////////////////////////////////////////////////////////////
 // Comparable
 
-fun <T : Comparable<T>> clipRange(min : T, max : T, src : T) =
-	if(src < min) min else if(src > max) max else src
+fun <T : Comparable<T>> clipRange(min: T, max: T, src: T) =
+    if (src < min) min else if (src > max) max else src
 
 ////////////////////////////////////////////////////////////////////
 
 // usage: number.notZero() ?: fallback
 // equivalent: if(this != 0 ) this else null
-fun Int.notZero() : Int? = if(this != 0) this else null
-fun Long.notZero() : Long? = if(this != 0L) this else null
-fun Float.notZero() : Float? = if(this != 0f) this else null
-fun Double.notZero() : Double? = if(this != .0) this else null
-
+fun Int.notZero(): Int? = if (this != 0) this else null
+fun Long.notZero(): Long? = if (this != 0L) this else null
+fun Float.notZero(): Float? = if (this != 0f) this else null
+fun Double.notZero(): Double? = if (this != .0) this else null
 
 ////////////////////////////////////////////////////////////////////
 // long
@@ -22,7 +21,7 @@ fun Double.notZero() : Double? = if(this != .0) this else null
 ////////////////////////////////////////////////////////////////////
 // float
 
-fun Float.abs() : Float = Math.abs(this)
+fun Float.abs(): Float = kotlin.math.abs(this)
 
 //@SuppressLint("DefaultLocale")
 //fun Long.formatTimeDuration() : String {
