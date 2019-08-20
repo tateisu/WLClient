@@ -4,6 +4,8 @@ import android.app.Activity
 import android.content.Intent
 import android.database.Cursor
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.BaseAdapter
@@ -11,9 +13,12 @@ import android.widget.ImageView
 import android.widget.ListView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
 import com.bumptech.glide.Glide
 import com.bumptech.glide.RequestManager
+import jp.juggler.util.ActionsDialog
 import jp.juggler.util.LogCategory
+import jp.juggler.util.showToast
 import jp.juggler.wlclient.table.Girl
 import jp.juggler.wlclient.table.History
 import kotlinx.coroutines.*
@@ -45,32 +50,56 @@ class ActUndoHistory : AppCompatActivity(), CoroutineScope {
 
         job = Job()
 
-        setContentView(R.layout.act_undo_history)
-        this.adapter = MyAdapter()
-        listView.adapter = adapter
-        listView.setOnItemClickListener { _, _, position, _ -> adapter.onItemClick(position) }
-
         this.glide = Glide.with(this@ActUndoHistory)
+
+        initUI()
 
         load()
     }
 
     override fun onDestroy() {
-        super.onDestroy()
-        runBlocking { job.cancelAndJoin() }
-        adapter.cursor?.close()
-    }
-
-    private fun load() = launch {
         try {
-            val cursor = withContext(Dispatchers.IO) { History.cursorByCreatedAt() }
-            adapter.cursor = cursor
-            adapter.colIdx = History.ColIdx(cursor)
-            adapter.notifyDataSetChanged()
+            adapter.cursor?.close()
+            adapter.cursor = null
         } catch (ex: Throwable) {
             log.trace(ex)
-            log.e(ex, "load failed.")
         }
+
+        runBlocking { job.cancelAndJoin() }
+
+        super.onDestroy()
+    }
+
+
+    private fun initUI() {
+        setContentView(R.layout.act_undo_history)
+
+        val toolBar: Toolbar = findViewById(R.id.toolbar)
+        setSupportActionBar(toolBar)
+
+        this.adapter = MyAdapter()
+        listView.adapter = adapter
+        listView.setOnItemClickListener { _, _, position, _ -> adapter.onItemClick(position) }
+        listView.setOnItemLongClickListener { _, _, position, _ -> adapter.onItemLongClick(position);true }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        // nothing to show
+        // menuInflater.inflate(R.menu.act_main, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean =
+        when (item.itemId) {
+
+            else -> super.onOptionsItemSelected(item)
+        }
+
+    private fun load() = launchEx("load") {
+        val cursor = withContext(Dispatchers.IO) { History.cursorByCreatedAt() }
+        adapter.cursor = cursor
+        adapter.colIdx = History.ColIdx(cursor)
+        adapter.notifyDataSetChanged()
     }
 
     inner class ViewHolder(root: View) {
@@ -84,7 +113,10 @@ class ActUndoHistory : AppCompatActivity(), CoroutineScope {
             ivThumbnail1.setImageDrawable(null)
 
             if (seeds?.isNotEmpty() == true) {
-                Girl.load(seeds)?.let { girl ->
+                val girl = Girl.load(seeds)
+                if (girl == null) {
+                    log.w("missing girl for seed $seeds")
+                } else {
                     val file = girl.largePath?.let { File(it) }
                     if (file?.exists() == true) {
                         glide.load(file).into(ivThumbnail1)
@@ -185,6 +217,26 @@ class ActUndoHistory : AppCompatActivity(), CoroutineScope {
                 putExtra("gid", item.id)
             })
             finish()
+        }
+
+        fun onItemLongClick(position: Int) {
+            ActionsDialog()
+                .addAction("delete") {
+                    gen(position)?.let {
+                        it.delete()
+                        load()
+                    }
+                }
+                .show(this@ActUndoHistory)
+        }
+    }
+
+    private fun launchEx(caption: String, block: suspend () -> Unit) = launch {
+        try {
+            block()
+        } catch (ex: Throwable) {
+            log.trace(ex)
+            showToast(this@ActUndoHistory, ex, "$caption failed.")
         }
     }
 }

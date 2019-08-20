@@ -4,11 +4,8 @@ import android.content.ContentValues
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.graphics.*
-import jp.juggler.util.LogCategory
-import jp.juggler.util.getByteArrayOrNull
-import jp.juggler.util.getStringOrNull
+import jp.juggler.util.*
 import jp.juggler.wlclient.App1
-import java.io.ByteArrayOutputStream
 
 class History(
     // primary key
@@ -61,6 +58,9 @@ class History(
             db.execSQL(
                 "create unique index if not exists ${table}_create on $table($COL_CREATED_AT,$COL_EVENT)"
             )
+            db.execSQL(
+                "create index if not exists ${table}_seeds on $table($COL_SEEDS,$COL_CREATED_AT)"
+            )
         }
 
         override fun onDBUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -71,6 +71,11 @@ class History(
                 } catch (ex: Throwable) {
                     log.trace(ex)
                 }
+            }
+            if (oldVersion < 3 && newVersion >= 3) {
+                db.execSQL(
+                    "create index if not exists ${table}_seeds on $table($COL_SEEDS,$COL_CREATED_AT)"
+                )
             }
         }
 
@@ -83,14 +88,14 @@ class History(
                 generationId = generationId
             ).apply {
                 try {
-                    id = App1.database.insert(table, null, ContentValues().apply{
+                    id = App1.database.insertOrThrow(table, null, ContentValues().apply {
                         put(COL_CREATED_AT, createdAt)
                         put(COL_SEEDS, seeds)
                         put(COL_STEP, step)
                         put(COL_EVENT, event)
                         put(COL_GENNERATION_ID, generationId)
                     })
-                    log.d("create: id=$id,generationId=$generationId")
+                    log.d("create: id=$id,generationId=$generationId,seeds=$seeds")
                 } catch (ex: Throwable) {
                     log.e(ex, "save failed.")
                 }
@@ -106,7 +111,7 @@ class History(
                 createdAt = cursor.getLong(colIdx.idxCreatedAt),
                 thumbnail = cursor.getByteArrayOrNull(colIdx.idxThumbnail),
                 event = cursor.getInt(colIdx.idxEvent),
-                generationId =cursor.getLong(colIdx.idxGenerationId)
+                generationId = cursor.getLong(colIdx.idxGenerationId)
             )
         }
 
@@ -122,7 +127,8 @@ class History(
                 "$COL_CREATED_AT desc"
             )
 
-        fun loadById(
+        @Suppress("RedundantSuspendModifier")
+        suspend fun loadById(
             gid: Long,
             condition: String = "=",
             order: String = "asc"
@@ -144,6 +150,25 @@ class History(
             return null
         }
 
+        fun loadBySeed(seeds: String): History? {
+            App1.database.query(
+                table,
+                null,
+                "$COL_SEEDS =?",
+                arrayOf(seeds),
+                null,
+                null,
+                "$COL_CREATED_AT desc",
+                "1"
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    return load(null, cursor)
+                }
+            }
+            return null
+        }
+
+        private const val THUMBNAIL_SIZE = 200
 
     }
 
@@ -157,45 +182,55 @@ class History(
         val idxGenerationId = cursor.getColumnIndex(COL_GENNERATION_ID)
     }
 
-    fun saveThumbnail(thumbnailBitmaps: Array<Bitmap?>) {
-        val width = 200
-        val bitmap = Bitmap.createBitmap(width, width, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        val paint = Paint()
-        val srcRect = Rect(0, 0, 0, 0)
-        val dstRect = Rect(0, 0, width, width)
-        // fill background
-        paint.color = Color.WHITE
-        canvas.drawRect(dstRect, paint)
-        // copy thumbnails
-        paint.isFilterBitmap = true
-        var idx = 0
-        for (y in 0 until 4) {
-            for (x in 0 until 4) {
-                thumbnailBitmaps[idx++]?.let {
-                    srcRect.right = it.width
-                    srcRect.bottom = it.height
-                    dstRect.left = (width * x / 4)
-                    dstRect.right = (width * (x + 1) / 4)
-                    dstRect.top = (width * y / 4)
-                    dstRect.bottom = (width * (y + 1) / 4)
-                    canvas.drawBitmap(it, srcRect, dstRect, paint)
+    fun saveThumbnail(thumbnailData: List<ByteArray>?) {
+        thumbnailData ?: return
+
+        Bitmap.createBitmap(THUMBNAIL_SIZE, THUMBNAIL_SIZE, Bitmap.Config.ARGB_8888)?.use { dst ->
+
+            val srcRect = Rect(0, 0, 0, 0)
+            val dstRect = Rect(0, 0, THUMBNAIL_SIZE, THUMBNAIL_SIZE)
+
+            val paint = Paint().apply {
+                isFilterBitmap = true
+                color = Color.WHITE
+            }
+
+            val canvas = Canvas(dst)
+
+            // fill background
+            canvas.drawRect(dstRect, paint)
+
+            // copy thumbnails
+            var idx = 0
+            imageLoop@ for (y in 0 until 4) {
+                dstRect.top = (THUMBNAIL_SIZE * y / 4)
+                dstRect.bottom = (THUMBNAIL_SIZE * (y + 1) / 4)
+                for (x in 0 until 4) {
+                    dstRect.left = (THUMBNAIL_SIZE * x / 4)
+                    dstRect.right = (THUMBNAIL_SIZE * (x + 1) / 4)
+
+                    if (idx >= thumbnailData.size) break@imageLoop
+
+                    thumbnailData[idx++].toBitmap()?.use { src ->
+                        srcRect.right = src.width
+                        srcRect.bottom = src.height
+                        canvas.drawBitmap(src, srcRect, dstRect, paint)
+                    }
                 }
             }
-        }
 
-        val stream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
-        bitmap.recycle()
-        this.thumbnail = stream.toByteArray()
+            this.thumbnail = dst.toPng()
 
-        try {
-            val cv = ContentValues()
-            cv.put(COL_THUMBNAIL, thumbnail)
-            App1.database.update(table, cv, "$COL_ID=?", arrayOf(id.toString()))
-        } catch (ex: Throwable) {
-            log.e(ex, "save failed.")
+            App1.database.update(
+                table,
+                ContentValues().apply { put(COL_THUMBNAIL, thumbnail) },
+                "$COL_ID=?",
+                arrayOf(id.toString())
+            )
         }
     }
 
+    fun delete() {
+        App1.database.delete(table,"$COL_ID=?",arrayOf(id.toString()))
+    }
 }

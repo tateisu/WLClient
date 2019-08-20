@@ -15,4 +15,10 @@
     <string name="seeds">Seeds</string>
     <string name="randomize">Randomize</string>
     <string name="generate">Generate</string>
+    <string name="view">View</string>
+    <string name="send">Send</string>
+    <string name="share">Share</string>
+    <string name="random">random</string>
+    <string name="noise">Noise</string>
+    <string name="mark">Mark</string>
 </resources>

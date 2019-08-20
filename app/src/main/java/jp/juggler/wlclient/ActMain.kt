@@ -3,9 +3,9 @@ package jp.juggler.wlclient
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
 import android.widget.HorizontalScrollView
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -15,18 +15,14 @@ import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.beust.klaxon.JsonObject
+import com.bumptech.glide.Glide
+import com.bumptech.glide.RequestManager
 import jp.juggler.util.*
 import jp.juggler.wlclient.table.Girl
 import jp.juggler.wlclient.table.History
 import kotlinx.coroutines.*
-import org.apache.commons.io.IOUtils
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import java.io.File
-import java.io.FileInputStream
 import kotlin.coroutines.CoroutineContext
-import android.view.Menu
-import android.view.MenuItem
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -50,21 +46,16 @@ class ActMain : AppCompatActivity(), CoroutineScope {
 
         private const val TAG_GIRL = R.id.tag_girl
 
-        private fun decodePng(src: ByteArray?): Bitmap? {
-            if (src == null || src.isEmpty()) return null
-            return try {
-                BitmapFactory.decodeStream(ByteArrayInputStream(src))
-            } catch (ex: Throwable) {
-                log.e("decodePng failed.")
-                null
-            }
-        }
     }
+
+    private val myActivity = this
 
     private lateinit var job: Job
 
     override val coroutineContext: CoroutineContext
         get() = Dispatchers.Main + job
+
+    internal lateinit var glide: RequestManager
 
     private val ivCurrentGirl by lazy { findViewById<ImageView>(R.id.ivCurrentGirl) }
     private val btnNew by lazy { findViewById<ImageButton>(R.id.btnNew) }
@@ -75,18 +66,19 @@ class ActMain : AppCompatActivity(), CoroutineScope {
     private val btnHistory by lazy { findViewById<ImageButton>(R.id.btnHistory) }
     private val btnHistoryBack by lazy { findViewById<ImageButton>(R.id.btnHistoryBack) }
     private val btnHistoryForward by lazy { findViewById<ImageButton>(R.id.btnHistoryForward) }
-
     private val svThumbnails by lazy { findViewById<HorizontalScrollView>(R.id.svThumbnails) }
     private val llThumbnails by lazy { findViewById<LinearLayout>(R.id.llThumbnails) }
     private val ivThumbnails = ArrayList<ImageView>()
 
+    // girl currently selected.
     private var currentGirl: Girl? = null
 
-    private var bitmapCurrentGirl: Bitmap? = null
-    private val bitmapThumbnails = arrayOfNulls<Bitmap>(16)
-
-    private var lastStep: Int = 0
+    // list of girls can be choose.
     private var lastList: List<Girl>? = null
+
+    /////////////////////////////////////////////////////
+    // states.
+    private var lastStep: Int = 0
     private var lastHistoryId: Long = 0L
 
     private fun saveState() {
@@ -96,11 +88,15 @@ class ActMain : AppCompatActivity(), CoroutineScope {
             .apply()
     }
 
+    //////////////////////////////////////////////////////////////
+    // lifecycle events
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         job = Job()
         App1.prepare(this)
+
+        glide = Glide.with(this)
 
         lastStep = App1.pref.getInt(PREF_LAST_STEP, 0)
         lastHistoryId = App1.pref.getLong(PREF_LAST_HISTORY, 0L)
@@ -109,21 +105,21 @@ class ActMain : AppCompatActivity(), CoroutineScope {
 
         checkStoragePermission()
 
-        launch {
+        launchEx("restoreLast") {
             if (!loadHistory(lastHistoryId)) showCurrentGirl()
         }
     }
 
     override fun onDestroy() {
-        super.onDestroy()
-        runBlocking { job.cancelAndJoin() }
-        bitmapThumbnails.forEach { it?.recycle() }
-        bitmapCurrentGirl?.recycle()
-    }
+        runBlocking {
+            try {
+                job.cancelAndJoin()
+            } catch (ex: Throwable) {
+                log.trace(ex)
+            }
+        }
 
-    override fun onSaveInstanceState(outState: Bundle?) {
-        super.onSaveInstanceState(outState)
-        saveState()
+        super.onDestroy()
     }
 
     override fun onStart() {
@@ -136,33 +132,23 @@ class ActMain : AppCompatActivity(), CoroutineScope {
         saveState()
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        when (requestCode) {
-            REQUEST_CODE_EXTERNAL_STORAGE ->
-                grantResults
-                    .find { it != PackageManager.PERMISSION_GRANTED }
-                    ?.let {
-                        showToast(this@ActMain, true, "permission not granted. exit app…")
-                        finish()
-                    }
-        }
+    override fun onSaveInstanceState(outState: Bundle?) {
+        super.onSaveInstanceState(outState)
+        saveState()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (resultCode == RESULT_OK) {
             when (requestCode) {
-                REQUEST_CODE_UNDO_HISTORY -> launch { loadHistory(data?.getLongExtra("gid", 0L)) }
+                REQUEST_CODE_UNDO_HISTORY -> launchEx("loadHistory") {
+                    loadHistory(data?.getLongExtra("gid", 0L))
+                }
             }
         }
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        menuInflater.inflate(R.menu.act_main, menu)
-        return true
-    }
+    //////////////////////////////////////////////////////
 
     private fun initUI() {
         setContentView(R.layout.act_main)
@@ -182,23 +168,18 @@ class ActMain : AppCompatActivity(), CoroutineScope {
                 ivThumbnails.add(this)
 
                 setOnClickListener {
-                    launch {
-                        (it.getTag(TAG_GIRL) as? Girl)?.choose()
-                    }
+                    (it.getTag(TAG_GIRL) as? Girl)?.choose()
                 }
+
                 setOnLongClickListener {
-                    launch {
-                        (it.getTag(TAG_GIRL)  as? Girl)?.contextMenu(this@ActMain, lastStep)
-                    }
+                    (it.getTag(TAG_GIRL)  as? Girl)?.contextMenu()
                     true
                 }
             }
         }
 
         ivCurrentGirl.setOnClickListener {
-            launch {
-                currentGirl?.contextMenu(this@ActMain, lastStep)
-            }
+            currentGirl?.contextMenu()
         }
 
         btnNew.setOnClickListener { generate(0) }
@@ -207,44 +188,48 @@ class ActMain : AppCompatActivity(), CoroutineScope {
         btnPose.setOnClickListener { generate(3) }
 
         btnSaveAll.setOnClickListener { saveAll() }
-        btnSaveAll.setButtonColor(this@ActMain, R.drawable.ic_save, false)
 
         btnHistory.setOnClickListener {
             startActivityForResult(Intent(this, ActUndoHistory::class.java), REQUEST_CODE_UNDO_HISTORY)
         }
 
         btnHistoryBack.setOnClickListener {
-            launch {
+            launchEx("backHistory") {
                 History.loadById(lastHistoryId, condition = "<", order = "desc")?.show()
             }
         }
 
         btnHistoryForward.setOnClickListener {
-            launch {
+            launchEx("forwardHistory") {
                 History.loadById(lastHistoryId, condition = ">", order = "asc")?.show()
             }
         }
+
+        btnSaveAll.setButtonColor(myActivity, R.drawable.ic_save, false)
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.act_main, menu)
+        return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean =
         when (item.itemId) {
 
             R.id.menuSeeds -> {
-                launch {
-                    DlgSeeds.open(this@ActMain, currentGirl) { step, seeds ->
-                        suspendCoroutine { cont ->
-                            generate(step, seeds) {
-                                cont.resume(it)
-                            }
-                        }
-                    }
-                }
+                currentGirl?.seedsDialog()
+                true
+            }
+            R.id.menuGenerate ->{
+                generateDialog()
                 true
             }
 
             else -> super.onOptionsItemSelected(item)
         }
 
+    ////////////////////////////////////////////////////////////////////////
+    // runtime permission
 
     // return true if permission granted
     private fun checkStoragePermission() =
@@ -260,16 +245,34 @@ class ActMain : AppCompatActivity(), CoroutineScope {
             }
         }
 
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode) {
+            REQUEST_CODE_EXTERNAL_STORAGE ->
+                grantResults
+                    .find { it != PackageManager.PERMISSION_GRANTED }
+                    ?.let {
+                        showToast(myActivity, true, "permission not granted. exit app…")
+                        finish()
+                    }
+        }
+    }
+
+
+    ////////////////////////////////////////////////////////////////////////
+    // UI actions that launch coroutines.
+
     private fun generate(
         step: Int,
         seedsArg: String? = null,
         callback: suspend (isOk: Boolean) -> Unit = {}
-    ) = launch {
+    ) = launchEx("generate()") {
 
         callback(try {
 
             var history: History? = null
-            ProgressRunner(this@ActMain).progressPrefix("generate…").run {
+            ProgressRunner(myActivity).run { progress ->
 
                 val seeds = if (step == 0) {
                     null
@@ -278,6 +281,8 @@ class ActMain : AppCompatActivity(), CoroutineScope {
                 }
 
                 val list = withContext(Dispatchers.IO) {
+
+                    progress.publishApiProgress("create history…")
 
                     val parentSeed: String?
                     val dataString = JsonObject().apply {
@@ -294,11 +299,15 @@ class ActMain : AppCompatActivity(), CoroutineScope {
                     val h = History.create(History.EVENT_GENERATE, step, parentSeed)
                     history = h
 
+                    progress.publishApiProgress("acquire results…")
+
                     Girl.generate(dataString, h)
                 }
 
-                setThumbnails(list)
-                history?.apply { saveThumbnail(bitmapThumbnails) }
+                setThumbnails(list, progress)
+
+                progress.publishApiProgress("save history…")
+                history?.apply { saveThumbnail(list.map { it.thumbnail }) }
 
                 if (step == 0 || seedsArg != null) {
                     currentGirl = null
@@ -311,154 +320,218 @@ class ActMain : AppCompatActivity(), CoroutineScope {
             }
         } catch (ex: Throwable) {
             log.trace(ex)
-            showToast(this@ActMain, ex, "generate failed")
+            showToast(myActivity, ex, "generate failed")
             false
         })
     }
 
-    private suspend fun History.show() = ProgressRunner(this@ActMain)
-        .progressPrefix("load from history…")
-        .run {
-            log.d("History.show() current=$seeds, id=$id, generationId=$generationId")
+    private fun Girl.choose() = launchEx("choose") {
 
-            lastStep = step
-            lastHistoryId = id
+        ProgressRunner(myActivity)
+            .run { progress ->
+                prepareLargeImage(myActivity, lastStep, progress)
+                currentGirl = this
+                showCurrentGirl()
 
-            // restore current girl
-            currentGirl = Girl.load(seeds)
-            currentGirl?.prepareLargeImage(this@ActMain, step)
+                History.create(
+                    History.EVENT_CHOOSE,
+                    lastStep,
+                    seeds,
+                    generationId = lastList?.first()?.generationId ?: 0L
+                ).apply {
+                    progress.publishApiProgress("save history…")
+                    saveThumbnail(lastList?.map { it.thumbnail })
+                    lastHistoryId = id
+                }
+
+                // setThumbnails(lastList,progress = progress)
+            }
+    }
+
+    suspend fun chooseBySeeds(seeds: String): Girl? = ProgressRunner(myActivity).run { progress ->
+        val oldHistory = History.loadBySeed(seeds)
+        if( oldHistory != null){
+            oldHistory.show()
+            return@run currentGirl
+        }
+
+        val history =  History.create(History.EVENT_CHOOSE,4,seeds)
+
+        Girl.generateFromSeeds(myActivity, history, progress)?.apply {
+            lastStep = history.step
+            lastList = null
+            currentGirl = this
             showCurrentGirl()
 
-            //restore choice
-            setThumbnails(Girl.loadByHistoryId(generationId.notZero() ?: id))
+            val g2 = Girl.load(this.seeds)
+            if(g2 == null){
+                log.e("girl not saved!")
+            }
 
+            history.apply {
+                progress.publishApiProgress("save history…")
+                saveThumbnail(null)
+                lastHistoryId = id
+            }
+            setThumbnails(null, progress = progress)
         }
+    }
 
-    private suspend fun loadHistory(historyId: Long?): Boolean {
-        if (historyId == null) {
-            showToast(this@ActMain, false, "missing id.")
-            return false
-        }
-
-        if (historyId == 0L) return false
-
-        val src = History.loadById(historyId)
-        if (src == null) {
-            showToast(this@ActMain, false, "missing data.")
-            return false
-        }
-
-        src.show()
-        return true
-
+    private fun saveAll() = launchEx("saveAll") {
+        ProgressRunner(myActivity, progress_style = ProgressRunner.PROGRESS_HORIZONTAL)
+            .run { progress ->
+                val list = lastList
+                when {
+                    list?.isEmpty() != false ->
+                        showToast(myActivity, true, "list is null or empty.")
+                    else -> {
+                        list.forEachIndexed { index, girl ->
+                            progress.publishApiProgressRatio(index + 1, list.size)
+                            girl.prepareLargeImage(myActivity, lastStep, progress)
+                        }
+                        val path = getExternalFilesDir(null)?.absolutePath
+                        showToast(myActivity, true, "all image was saved to $path")
+                    }
+                }
+            }
     }
 
 
-    private suspend fun setThumbnails(list: List<Girl> = ArrayList()) {
+    private fun Girl.contextMenu() = launchEx("contextMenu") {
+        DlgContextMenu(myActivity, this, lastStep).show()
+    }
+
+    private fun Girl?.seedsDialog() = launchEx("seedsDialog") {
+        DlgSeeds.open(myActivity, this) { step, seeds ->
+            suspendCoroutine { cont ->
+                generate(step, seeds) {
+                    cont.resume(it)
+                }
+            }
+        }
+    }
+    private fun generateDialog() = launchEx("generateDialog") {
+        DlgGenerate.open(myActivity)
+    }
+    ////////////////////////////////////////////////////////////////////////
+    // internal functions
+
+    fun launchEx(caption: String, block: suspend () -> Unit) = launch {
+        try {
+            block()
+        } catch (ex: Throwable) {
+            log.trace(ex)
+            showToast(myActivity, ex, "$caption failed.")
+        }
+    }
+
+    private fun showCurrentGirl() {
+        val girl = currentGirl
+
+        val hasGirl = girl != null
+        btnColor.setButtonColor(myActivity, R.drawable.ic_color, hasGirl)
+        btnDetail.setButtonColor(myActivity, R.drawable.ic_brush, hasGirl)
+        btnPose.setButtonColor(myActivity, R.drawable.ic_run, hasGirl)
+
+        ivCurrentGirl.setImageDrawable(null)
+        glide.clear(ivCurrentGirl)
+
+        val path = girl?.largePath
+        val file = when {
+            path?.isNotEmpty() == true -> File(path)
+            else -> null
+        }
+        val thumbnail = girl?.thumbnail
+
+        when {
+            file?.exists() == true -> glide.load(file).into(ivCurrentGirl)
+            thumbnail?.isNotEmpty() == true -> glide.load(thumbnail).into(ivCurrentGirl)
+        }
+    }
+
+    private fun setThumbnails(
+        listArg: List<Girl>? = null,
+        progress: ProgressRunner? = null
+    ) {
+        val list = listArg ?: ArrayList()
+
+        progress?.publishApiProgress("set thumbnails…")
 
         log.d("setThumbnails: list = ${list.size}")
 
         lastList = list
 
-        btnSaveAll.setButtonColor(this@ActMain, R.drawable.ic_save, list.isNotEmpty())
+        btnSaveAll.setButtonColor(myActivity, R.drawable.ic_save, list.isNotEmpty())
 
         svThumbnails.scrollTo(0, 0)
 
         ivThumbnails.forEachIndexed { idx, iv ->
+
+            progress?.publishApiProgressRatio(idx + 1, list.size)
+
             try {
                 // ビットマップへの参照を外す
                 iv.setImageDrawable(null)
                 iv.setTag(TAG_GIRL, null)
+                glide.clear(iv)
 
                 // サムネイル画像を更新
-
-                val item = if (idx >= list.size) {
-                    null
-                } else {
-                    list[idx]
-                }
-
-                if (item != null) {
-                    val bitmap = withContext(Dispatchers.IO) {
-                        decodePng(item.thumbnail)
-                    }
-                    bitmapThumbnails[idx]?.recycle()
-                    bitmapThumbnails[idx] = bitmap
-                    iv.setImageBitmap(bitmap)
+                if (idx < list.size) {
+                    val item = list[idx]
                     iv.setTag(TAG_GIRL, item)
-                } else {
-                    bitmapThumbnails[idx]?.recycle()
-                    bitmapThumbnails[idx] = null
+                    glide.load(item.thumbnail).into(iv)
+
+                    log.d("setThumbnails: ${item.seeds}")
                 }
+
             } catch (ex: Throwable) {
+                log.trace(ex)
                 log.e(ex, "showThumbnail failed.")
             }
         }
     }
 
-    private suspend fun Girl.choose() {
-        ProgressRunner(this@ActMain).progressPrefix("prepare large image…").run {
-            prepareLargeImage(this@ActMain, lastStep)
-            currentGirl = this
-            showCurrentGirl()
 
-            History.create(
-                History.EVENT_CHOOSE,
-                lastStep,
-                seeds,
-                generationId = lastList?.first()?.generationId ?: 0L
-            ).apply {
-                saveThumbnail(bitmapThumbnails)
+    // returns false if loading failed and still current girl is not shown.
+    private suspend fun loadHistory(historyId: Long?) = when (historyId) {
+
+        null -> {
+            showToast(myActivity, false, "missing id.")
+            false
+        }
+
+        0L -> false // toast will not be shown in this case.
+
+        else -> when (val src = History.loadById(historyId)) {
+
+            null -> {
+                showToast(myActivity, false, "missing data.")
+                false
+            }
+
+            else -> {
+                src.show()
+                true
+            }
+        }
+    }
+
+    private suspend fun History.show() {
+        ProgressRunner(myActivity)
+            .run { progress ->
+                log.d("History.show() current=$seeds, id=$id, generationId=$generationId")
+
+                lastStep = step
                 lastHistoryId = id
+
+                // restore current girl
+                currentGirl = Girl.load(seeds)
+                currentGirl?.prepareLargeImage(myActivity, step, progress = progress)
+
+                showCurrentGirl()
+
+                //restore choice
+                setThumbnails(Girl.loadByHistoryId(generationId.notZero() ?: id), progress)
             }
-
-            setThumbnails()
-        }
     }
-
-    private suspend fun showCurrentGirl() {
-
-        val girl = currentGirl
-
-        val hasGirl = girl != null
-        btnColor.setButtonColor(this@ActMain, R.drawable.ic_color, hasGirl)
-        btnDetail.setButtonColor(this@ActMain, R.drawable.ic_brush, hasGirl)
-        btnPose.setButtonColor(this@ActMain, R.drawable.ic_run, hasGirl)
-
-        ivCurrentGirl.setImageDrawable(null)
-
-        girl?.largePath?.notEmpty()?.let { path ->
-            try {
-                val bitmap = withContext(Dispatchers.IO) {
-                    decodePng(FileInputStream(File(path)).use {
-                        val bao = ByteArrayOutputStream()
-                        IOUtils.copy(it, bao)
-                        bao.toByteArray()
-                    })
-                }
-                bitmapCurrentGirl?.recycle()
-                bitmapCurrentGirl = bitmap
-                ivCurrentGirl.setImageBitmap(bitmap)
-            } catch (ex: Throwable) {
-                log.trace(ex)
-                showToast(this@ActMain, ex, "showCurrentGirl: bitmap load failed.")
-            }
-        }
-    }
-
-    private fun saveAll() = launch {
-        ProgressRunner(this@ActMain).progressPrefix("Save images… ").run { runner ->
-            val list = lastList
-            if (list?.isEmpty() != false) {
-                showToast(this@ActMain, true, "list is null or empty.")
-            } else {
-                list.forEachIndexed { index, girl ->
-                    runner.publishApiProgress(String.format("%d/%d", index + 1, list.size))
-                    girl.prepareLargeImage(this@ActMain, lastStep)
-                }
-                showToast(this@ActMain, true, "all image was saved to ${getExternalFilesDir(null)?.absolutePath}")
-            }
-        }
-    }
-
 }
