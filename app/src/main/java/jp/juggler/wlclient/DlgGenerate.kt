@@ -31,7 +31,7 @@ class DlgGenerate(private val activity: ActMain) {
     private val density: Float = activity.resources.displayMetrics.density
 
     @SuppressLint("InflateParams")
-    private val viewRoot = activity.layoutInflater.inflate(R.layout.dlg_seeds2, null, false)
+    private val viewRoot = activity.layoutInflater.inflate(R.layout.dlg_generate, null, false)
 
     private val ivImage: ImageView = viewRoot.findViewById(R.id.ivImage)
     private val btnGenerate: Button = viewRoot.findViewById(R.id.btnGenerate)
@@ -99,7 +99,7 @@ class DlgGenerate(private val activity: ActMain) {
             fun initRadioGroup(rg: RadioGroup, rbMarked: RadioButton, rbRandom: RadioButton, type: MarkType) {
                 val key = "Mark_${type.name}"
                 val sv = App1.pref.getString(key, "") ?: ""
-                rbMarked.text = "Marked : ${sv}"
+                rbMarked.text = "Marked: $sv"
                 if (sv.isNotEmpty()) {
                     rbMarked.isEnabled = true
                     rbMarked.isChecked = true

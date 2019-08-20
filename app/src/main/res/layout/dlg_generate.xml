@@ -4,6 +4,7 @@
         android:orientation="vertical"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:gravity="center_horizontal"
 >
     <ImageView
         android:layout_width="256dp"
@@ -46,6 +47,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="@string/pose"
+                        android:drawableStart="@drawable/ic_run"
+                        android:drawablePadding="4dp"
                 />
                 <RadioButton
                         android:layout_width="match_parent"
@@ -70,6 +73,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="@string/detail"
+                        android:drawableStart="@drawable/ic_brush"
+                        android:drawablePadding="4dp"
                 />
                 <RadioButton
                         android:layout_width="match_parent"
@@ -94,6 +99,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="@string/color"
+                        android:drawableStart="@drawable/ic_color"
+                        android:drawablePadding="4dp"
                 />
                 <RadioButton
                         android:layout_width="match_parent"
@@ -107,6 +114,7 @@
                         android:id="@+id/rbColorMarked"
                 />
             </RadioGroup>
+
             <RadioGroup
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -118,6 +126,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="@string/noise"
+                        android:drawableStart="@drawable/ic_shuffle"
+                        android:drawablePadding="4dp"
                 />
                 <RadioButton
                         android:layout_width="match_parent"
