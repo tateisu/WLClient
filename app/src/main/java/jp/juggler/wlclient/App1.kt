@@ -8,6 +8,7 @@ import android.database.sqlite.SQLiteOpenHelper
 import jp.juggler.wlclient.table.History
 import jp.juggler.wlclient.table.Girl
 import okhttp3.OkHttpClient
+import okhttp3.Request
 
 class App1 : Application() {
 
@@ -64,6 +65,15 @@ class App1 : Application() {
             //				db_open_helper.onCreate( db );
             //			}
         }
+
+        val requestBase : Request.Builder
+            get() = Request.Builder()
+                .header(
+                    "User-Agent",
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.100 Safari/537.36"
+                )
+                .header("Referer", "https://waifulabs.com/")
+
     }
     override fun onCreate() {
         super.onCreate()
