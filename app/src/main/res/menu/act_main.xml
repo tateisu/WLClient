@@ -8,5 +8,9 @@
         android:title="@string/seeds"
         app:showAsAction="never"
     />
-
+    <item
+            android:id="@+id/menuGenerate"
+            android:title="@string/generate"
+            app:showAsAction="never"
+    />
 </menu>

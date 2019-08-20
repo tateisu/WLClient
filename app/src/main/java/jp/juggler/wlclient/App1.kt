@@ -16,7 +16,7 @@ class App1 : Application() {
 
         private val tableList = arrayOf( Girl ,History)
 
-        private const val DB_VERSION = 2
+        private const val DB_VERSION = 3
 
         private const val DB_NAME = "app_db"
 

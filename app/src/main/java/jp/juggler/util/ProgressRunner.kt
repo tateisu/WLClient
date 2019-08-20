@@ -82,9 +82,6 @@ class ProgressRunner constructor(
         return this
     }
 
-    //////////////////////////////////////////////////////
-    // implements TootApiClient.Callback
-
 
     //////////////////////////////////////////////////////
     // ProgressDialog
@@ -97,6 +94,7 @@ class ProgressRunner constructor(
                 val progress = ProgressDialogEx(context)
                 this.progress = progress
                 progress.setCancelable(true)
+                progress.setCanceledOnTouchOutside(false)
                 progress.setOnCancelListener { canceller?.cancel() }
                 progress.setProgressStyle(progress_style)
                 progressSetupCallback(progress)
@@ -120,12 +118,10 @@ class ProgressRunner constructor(
         val message = info.message.trim { it <= ' ' }
         val progressPrefix = this.progressPrefix
         progress.setMessage(
-            if(progressPrefix == null || progressPrefix.isEmpty()) {
-                message
-            } else if(message.isEmpty()) {
-                progressPrefix
-            } else {
-                "$progressPrefix\n$message"
+            when {
+                progressPrefix?.isEmpty() != false -> message
+                message.isEmpty() -> progressPrefix
+                else -> "$progressPrefix\n$message"
             }
         )
 
@@ -156,15 +152,16 @@ class ProgressRunner constructor(
         }
     }
 
+    //////////////////////////////////////////////////////
+    // API to update progress message and gauge
+
     fun publishApiProgress(s : String) {
         synchronized(this) {
             info.message = s
-            info.isIndeterminate = true
         }
         delayProgressMessage()
     }
 
-    @Suppress("unused")
     fun publishApiProgressRatio(value : Int, max : Int) {
         synchronized(this) {
             info.isIndeterminate = false

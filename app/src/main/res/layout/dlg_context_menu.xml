@@ -28,23 +28,104 @@
                     android:scaleType="fitCenter"
                     android:importantForAccessibility="no"
             />
+            <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="end"
+            >
+                <Button
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:id="@+id/btnImageView"
+                        android:text="@string/view"
+                        android:textAllCaps="false"
+                />
+                <Button
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:id="@+id/btnImageSend"
+                        android:text="@string/share"
+                        android:textAllCaps="false"
+                />
+            </LinearLayout>
+
 
             <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:id="@+id/llPanel"
-                    android:paddingStart="12dp"
-                    android:paddingEnd="12dp"
-                    android:paddingBottom="6dp"
-            />
-
+                    android:orientation="horizontal"
+                    android:gravity="end|center_vertical"
+            >
+                <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/mark"
+                />
+                <ImageButton
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:minWidth="0dp"
+                        android:layout_height="44dp"
+                        android:id="@+id/btnMarkNoise"
+                        android:contentDescription="@string/noise"
+                        android:src="@drawable/ic_shuffle"
+                />
+                <ImageButton
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:minWidth="0dp"
+                        android:layout_height="44dp"
+                        android:id="@+id/btnMarkColor"
+                        android:contentDescription="@string/color"
+                        android:src="@drawable/ic_color"
+                />
+                <ImageButton
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:minWidth="0dp"
+                        android:layout_height="44dp"
+                        android:id="@+id/btnMarkDetail"
+                        android:contentDescription="@string/detail"
+                        android:src="@drawable/ic_brush"
+                />
+                <ImageButton
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:minWidth="0dp"
+                        android:layout_height="44dp"
+                        android:id="@+id/btnMarkPose"
+                        android:contentDescription="@string/pose"
+                        android:src="@drawable/ic_run"
+                />
+            </LinearLayout>
             <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="3dp"
+                    android:layout_marginTop="24dp"
                     android:id="@+id/tvText"
                     android:textColor="#000"
+            />
+            <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="end"
+                    android:orientation="horizontal"
+            >
+                <Button
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:id="@+id/btnTextSend"
+                        android:text="@string/share"
+                        android:textAllCaps="false"
+                />
+            </LinearLayout>
+            <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:orientation="vertical"
+                    android:id="@+id/llPanel"
             />
         </LinearLayout>
     </ScrollView>
@@ -62,6 +143,7 @@
             android:text="@string/cancel"
             android:textColor="@color/colorCancel"
             android:id="@+id/btnCancel"
+            android:textAllCaps="false"
 
     />
 </LinearLayout>
