@@ -31,7 +31,7 @@ enum class MarkType(val id: Int, val range: IntRange) {
     Noise(4, 16 until 18)
     ;
 
-    fun splitPart(seeds: String) = seeds.toJsonArray().slice(range)
+    private fun splitPart(seeds: String) = seeds.toJsonArray().slice(range)
 
     fun savePart(activity: AppCompatActivity, seeds: String) {
         try {
@@ -39,7 +39,7 @@ enum class MarkType(val id: Int, val range: IntRange) {
             val key = "Mark_$name"
             App1.pref.edit().putString(key, strMarked).apply()
             showToast(activity, false, "$strMarked\nwas marked as $name")
-        }catch(ex:Throwable) {
+        } catch (ex: Throwable) {
             showToast(activity, ex, "mark failed.")
         }
     }
@@ -47,7 +47,7 @@ enum class MarkType(val id: Int, val range: IntRange) {
     fun sameWith(seeds: String): Boolean {
         val strMarked = JsonArray(splitPart(seeds)).toJsonString()
         val key = "Mark_$name"
-        return strMarked == App1.pref.getString(key,null)
+        return strMarked == App1.pref.getString(key, null)
     }
 }
 
@@ -148,10 +148,11 @@ class Girl(
         fun load(seeds: String?): Girl? {
             seeds ?: return null
             try {
-                App1.database.query(table, null, "$COL_SEEDS=?", arrayOf(seeds), null, null, null)?.use { cursor ->
-                    if (cursor.moveToFirst()) return fromCursor(cursor)
-                    return null // 0 rows
-                }
+                App1.database.query(table, null, "$COL_SEEDS=?", arrayOf(seeds), null, null, null)
+                    ?.use { cursor ->
+                        if (cursor.moveToFirst()) return fromCursor(cursor)
+                        return null // 0 rows
+                    }
             } catch (ex: Throwable) {
                 log.trace(ex)
             }
@@ -218,7 +219,7 @@ class Girl(
             return list.mapIndexed { idx, jsonData -> parse(history.id, idx, jsonData) }
         }
 
-        private fun saveImageFile(context: Context, data: ByteArray, createdAt: Long) :File{
+        private fun saveImageFile(context: Context, data: ByteArray, createdAt: Long): File {
             val c = GregorianCalendar.getInstance()
             c.timeInMillis = createdAt
             val y = c.get(Calendar.YEAR)
@@ -244,7 +245,11 @@ class Girl(
             return file
         }
 
-        private suspend fun generateBig(seeds: String, step: Int, progress: ProgressRunner? = null): ByteArray? {
+        private suspend fun generateBig(
+            seeds: String,
+            step: Int,
+            progress: ProgressRunner? = null
+        ): ByteArray? {
             val now = SystemClock.elapsedRealtime()
             val remain = lastLargeImageEnd + 3000L - now
             if (remain > 0L) {
@@ -283,15 +288,20 @@ class Girl(
 
                 dataString = root.string("girl")?.notEmpty() ?: error("missing girl data.")
                 return Base64.decode(dataString, 0)
-            }finally{
-                lastLargeImageEnd =  SystemClock.elapsedRealtime()
+            } finally {
+                lastLargeImageEnd = SystemClock.elapsedRealtime()
             }
 
         }
 
-        suspend fun generateFromSeeds(context:Context,history: History,progress: ProgressRunner? = null): Girl? {
+        suspend fun generateFromSeeds(
+            context: Context,
+            history: History,
+            progress: ProgressRunner? = null
+        ): Girl? {
             val createdAt = System.currentTimeMillis()
-            val binary = generateBig(history.seeds !!, history.step, progress) ?: error("can't generate image")
+            val binary = generateBig(history.seeds!!, history.step, progress)
+                ?: error("can't generate image")
 
             val thumbnail = binary.toBitmap()?.use { src ->
                 val size = 200
@@ -311,7 +321,7 @@ class Girl(
 
                     dst.toPng()
                 }
-            }?: error("can't generate thumbnail")
+            } ?: error("can't generate thumbnail")
 
             return Girl(
                 seeds = history.seeds,
@@ -319,7 +329,7 @@ class Girl(
                 createdAt = System.currentTimeMillis(),
                 generationId = history.id
             ).apply {
-                this.largePath = saveImageFile(context,binary,createdAt).absolutePath
+                this.largePath = saveImageFile(context, binary, createdAt).absolutePath
                 this.chooseAt = System.currentTimeMillis()
                 log.d("generateFromSeeds: gId=$generationId, gSub=0, seeds=$seeds")
                 id = App1.database.insertOrThrow(table, null, ContentValues().apply {
@@ -328,7 +338,7 @@ class Girl(
                     put(COL_CREATED_AT, createdAt)
                     put(COL_GENERATION_ID, generationId)
                     put(COL_GENERATION_SUB, 0)
-                    put(COL_LARGE_PATH,largePath)
+                    put(COL_LARGE_PATH, largePath)
                     put(COL_CHOOSE_AT, chooseAt)
                 })
             }
@@ -358,9 +368,9 @@ class Girl(
             return String.format("%d/%02d/%02d-%02d:%02d:%02d", y, m, d, h, j, s)
         }
 
-    private fun saveFilePath(file:File?){
+    private fun saveFilePath(file: File?) {
         file ?: return
-        val cv = ContentValues().apply{
+        val cv = ContentValues().apply {
             val path = file.absolutePath
             largePath = path
             put(COL_LARGE_PATH, path)
@@ -375,16 +385,20 @@ class Girl(
 
     // download large image if not yet prepared.
     // return true if image was prepared.
-    suspend fun prepareLargeImage(context: Context, step: Int, progress: ProgressRunner? = null): Boolean {
+    suspend fun prepareLargeImage(
+        context: Context,
+        step: Int,
+        progress: ProgressRunner? = null
+    ): Boolean {
         return try {
             withContext(Dispatchers.IO) {
                 val path = largePath
                 if (path?.isNotEmpty() == true && File(path).exists()) return@withContext true
 
                 generateBig(seeds, step, progress)?.let { binary ->
-                    if (binary.isEmpty() ) return@let
+                    if (binary.isEmpty()) return@let
                     progress?.publishApiProgress("save to file…")
-                    saveFilePath( saveImageFile(context,binary,createdAt))
+                    saveFilePath(saveImageFile(context, binary, createdAt))
                 }
 
                 true
@@ -396,4 +410,42 @@ class Girl(
         }
 
     }
+
+    suspend fun saveLink(context: Context, email: String, name: String):Boolean =
+        ProgressRunner(context, progress_style = ProgressRunner.PROGRESS_SPINNER)
+            .run {
+                try {
+                    val seeds = seeds.replace(""",\[[^]]*?]""".toRegex(), "")
+
+                    val dataString = JsonObject().apply {
+                        put("seeds", seeds)
+                        put("emailAddress", email)
+                        put("girlName", name)
+                    }.toJsonString()
+
+                    val request = App1.requestBase
+                        .url("https://test-cluster-246919.appspot.com/save")
+                        .post(dataString.toRequestBody(mediaType = MEDIA_TYPE_JSON))
+                        .build()
+
+                    val res = App1.okHttpClient.newCall(request).await()
+
+                    if (!res.isSuccessful) error("HTTP ${res.code} ${res.message}")
+
+                    val content = res.body?.string()
+                    val root = when (content) {
+                        null -> error("missing response body")
+                        else -> content.toJsonObject()
+                    }
+
+                    val result = root.boolean("success") ?: false
+                    if (!result) error(content)
+                    else showToast(context, false, "saveLink succeeded.")
+                    true
+                }catch(ex:Throwable){
+                    showToast(context,ex,"saveLink failed.")
+                    false
+                }
+            }
+
 }

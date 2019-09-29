@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center_horizontal"
+        >
+
+    <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:fillViewport="true"
+            android:padding="12dp"
+            android:clipToPadding="false"
+            android:scrollbarStyle="outsideOverlay"
+            >
+        <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                >
+            <ImageView
+                    android:layout_width="256dp"
+                    android:layout_height="256dp"
+                    android:layout_marginTop="12dp"
+                    android:scaleType="fitCenter"
+                    android:id="@+id/ivImage"
+                    android:importantForAccessibility="no"
+                    />
+
+            <TextView
+                    android:layout_marginTop="8dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                android:text="@string/name"
+                    android:labelFor="@+id/etName"
+                />
+            <EditText
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                android:inputType="text"
+                android:importantForAutofill="no"
+                    android:id="@+id/etName"
+                />
+            <TextView
+                    android:layout_marginTop="8dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/e_mail"
+                    android:labelFor="@+id/etEMail"
+                    />
+            <EditText
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textEmailAddress"
+                    android:importantForAutofill="no"
+                    android:id="@+id/etEMail"
+                    />
+
+
+            <Button
+                    android:layout_marginTop="8dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textAllCaps="false"
+                    android:text="@string/send"
+                    android:id="@+id/btnSend"
+                    />
+
+        </LinearLayout>
+    </ScrollView>
+
+    <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#000"
+            />
+
+    <Button
+            style="?buttonBarButtonStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/cancel"
+            android:textColor="@color/colorCancel"
+            android:id="@+id/btnCancel"
+
+            />
+</LinearLayout>
