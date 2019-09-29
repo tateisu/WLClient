@@ -41,8 +41,6 @@ class ActMain : AppCompatActivity(), CoroutineScope {
         private const val REQUEST_CODE_EXTERNAL_STORAGE = 1
         private const val REQUEST_CODE_UNDO_HISTORY = 2
 
-        private const val PREF_LAST_STEP = "lastStep"
-        private const val PREF_LAST_HISTORY = "lastHistory"
 
         private const val TAG_GIRL = R.id.tag_girl
 
@@ -83,8 +81,8 @@ class ActMain : AppCompatActivity(), CoroutineScope {
 
     private fun saveState() {
         App1.pref.edit()
-            .putInt(PREF_LAST_STEP, lastStep)
-            .putLong(PREF_LAST_HISTORY, lastHistoryId)
+            .putInt(Pref.LAST_STEP, lastStep)
+            .putLong(Pref.LAST_HISTORY, lastHistoryId)
             .apply()
     }
 
@@ -98,8 +96,8 @@ class ActMain : AppCompatActivity(), CoroutineScope {
 
         glide = Glide.with(this)
 
-        lastStep = App1.pref.getInt(PREF_LAST_STEP, 0)
-        lastHistoryId = App1.pref.getLong(PREF_LAST_HISTORY, 0L)
+        lastStep = App1.pref.getInt(Pref.LAST_STEP, 0)
+        lastHistoryId = App1.pref.getLong(Pref.LAST_HISTORY, 0L)
 
         initUI()
 

@@ -9,11 +9,12 @@ apply plugin: 'kotlin-android-extensions'
 apply plugin: 'kotlin-kapt'
 
 android {
-    compileSdkVersion 28
+    compileSdkVersion 29
+    buildToolsVersion "29.0.2"
     defaultConfig {
         minSdkVersion 21
-        targetSdkVersion 28
-
+        targetSdkVersion 29
+        
         applicationId "jp.juggler.wlclient"
 
         versionCode 6
@@ -29,7 +30,7 @@ android {
     }
 
 
-    // Generate Signed APK 縺ｮ繝輔ぃ繧､繝ｫ蜷阪ｒ螟画峩
+    // Generate Signed APK のファイル名を変更
     android.applicationVariants.all { variant ->
         if (variant.buildType.name == "release") {
             variant.outputs.all {
@@ -49,8 +50,7 @@ dependencies {
     implementation"org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 
     implementation 'androidx.appcompat:appcompat:1.0.2'
-    implementation 'androidx.core:core-ktx:1.0.2'
-
+    implementation 'androidx.core:core-ktx:1.1.0'
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test:runner:1.2.0'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'

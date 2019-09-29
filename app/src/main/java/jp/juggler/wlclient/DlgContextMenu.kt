@@ -3,12 +3,10 @@ package jp.juggler.wlclient
 import android.annotation.SuppressLint
 import android.app.Dialog
 import android.content.Intent
-import android.view.View
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.ImageButton
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import com.bumptech.glide.Glide
 import jp.juggler.util.LogCategory
@@ -21,7 +19,7 @@ import java.io.File
 
 // open context menu, view,share,share file path..
 class DlgContextMenu(
-    private val activity: AppCompatActivity,
+    private val activity: ActMain,
     private val girl: Girl,
     private val step: Int
 ) {
@@ -116,6 +114,10 @@ class DlgContextMenu(
                 }
             }
 
+
+            viewRoot.findViewById<Button>(R.id.btnName).setOnClickListener{
+                   DlgNaming.open(activity )
+            }
             fun showMarkButton(){
                 btnMarkColor.setButtonColor(activity,R.drawable.ic_color,! MarkType.Color.sameWith(girl.seeds))
                 btnMarkDetail.setButtonColor(activity,R.drawable.ic_brush,! MarkType.Detail.sameWith(girl.seeds))

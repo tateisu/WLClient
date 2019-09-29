@@ -115,11 +115,19 @@
                 <Button
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:id="@+id/btnName"
+                        android:text="@string/naming"
+                        android:textAllCaps="false"
+                        />
+                <Button
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
                         android:id="@+id/btnTextSend"
                         android:text="@string/share"
                         android:textAllCaps="false"
                 />
             </LinearLayout>
+
             <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
