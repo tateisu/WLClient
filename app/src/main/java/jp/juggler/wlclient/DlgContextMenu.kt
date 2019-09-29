@@ -116,7 +116,7 @@ class DlgContextMenu(
 
 
             viewRoot.findViewById<Button>(R.id.btnName).setOnClickListener{
-                   DlgNaming.open(activity )
+                   DlgNaming.open(activity ,girl,step)
             }
             fun showMarkButton(){
                 btnMarkColor.setButtonColor(activity,R.drawable.ic_color,! MarkType.Color.sameWith(girl.seeds))

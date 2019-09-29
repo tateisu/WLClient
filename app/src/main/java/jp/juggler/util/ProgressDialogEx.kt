@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package jp.juggler.util
 
 import android.app.ProgressDialog

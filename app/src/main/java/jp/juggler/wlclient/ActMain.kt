@@ -130,7 +130,7 @@ class ActMain : AppCompatActivity(), CoroutineScope {
         saveState()
     }
 
-    override fun onSaveInstanceState(outState: Bundle?) {
+    override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         saveState()
     }
