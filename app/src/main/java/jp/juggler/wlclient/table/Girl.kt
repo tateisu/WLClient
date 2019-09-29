@@ -415,7 +415,7 @@ class Girl(
         ProgressRunner(context, progress_style = ProgressRunner.PROGRESS_SPINNER)
             .run {
                 try {
-                    val seeds = seeds.replace(""",\[[^]]*?]""".toRegex(), "")
+                    val seeds = seeds.replace(""",\[[^]]*?]""".toRegex(), "").toJsonArray()
 
                     val dataString = JsonObject().apply {
                         put("seeds", seeds)
@@ -424,7 +424,9 @@ class Girl(
                     }.toJsonString()
 
                     val request = App1.requestBase
-                        .url("https://test-cluster-246919.appspot.com/save")
+                        .header("Origin", "https://waifulabs.com")
+                        .header("Sec-Fetch-Mode", "cors")
+                        .url("https://test-cluster-246919.appspot.com//save")
                         .post(dataString.toRequestBody(mediaType = MEDIA_TYPE_JSON))
                         .build()
 
