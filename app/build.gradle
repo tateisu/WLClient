@@ -17,11 +17,12 @@ android {
         
         applicationId "jp.juggler.wlclient"
 
-        versionCode 6
-        versionName "6"
+        versionCode 7
+        versionName "7"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
+    
     buildTypes {
         release {
             minifyEnabled false
